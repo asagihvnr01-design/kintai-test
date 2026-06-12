@@ -274,19 +274,26 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
   .card{padding:12px 10px;margin-bottom:8px;border-radius:10px}
   .ct{font-size:13px}
 
-  /* ナビゲーションタブ */
-  .nav{gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  /* ナビゲーションタブ: 圧縮せず横スクロール＋十分なタップサイズ（44px目安） */
+  .nav{gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap}
   .nav::-webkit-scrollbar{display:none}
-  .nb{font-size:10px;padding:8px 3px;min-width:42px}
+  .nb{flex:0 0 auto;min-width:auto;font-size:13px;padding:13px 14px;min-height:44px}
+  .nb .badge-dot{top:8px;right:6px}
 
   /* 打刻ボタン */
-  .sbtn{padding:12px 8px;font-size:13px;border-radius:8px}
+  .sbtn{padding:16px 8px;font-size:15px;border-radius:10px;min-height:64px}
+  .sbtn .sub{font-size:12px}
   .stamp-row{gap:8px!important}
 
-  /* フォーム */
-  .fi{font-size:14px;padding:10px}
-  .fl{font-size:11px}
-  .fr{margin-bottom:8px}
+  /* フォーム: 16px未満だとiOSがフォーカス時に自動ズームするため16pxに */
+  .fi{font-size:16px;padding:11px}
+  .hinp{font-size:16px;padding:9px 6px}
+  .fl{font-size:12px}
+  .fr{margin-bottom:9px}
+  .sbv{padding:14px;font-size:15px;min-height:48px}
+  .hbtn{padding:9px 12px;font-size:13px;min-height:38px}
+  .app-btn{padding:12px;font-size:14px;min-height:46px}
+  .btn-odo{min-height:44px}
 
   /* 訪問実績入力 */
   .vrow{padding:8px 9px;margin-bottom:4px}
@@ -325,9 +332,10 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
   /* 編集フォーム */
   .ei{padding:10px}
   .ed{font-size:12px}
-  .einp{font-size:13px;padding:8px}
-  .esbtn{font-size:12px;padding:8px 12px}
+  .einp{font-size:16px;padding:9px}
+  .esbtn{font-size:13px;padding:10px 14px;min-height:40px}
   .er{gap:6px!important}
+  .vi{font-size:16px}
 
   /* ボタン類 */
   .mb{font-size:11px;padding:6px 10px}
@@ -345,13 +353,13 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
   .sec-sep{font-size:11px;padding:3px 8px}
 }
 
-/* 非常に小さい画面（iPhone SE等 幅375px以下） */
+/* 非常に小さい画面（iPhone SE等 幅375px以下）: ナビは横スクロールのため縮小しない */
 @media(max-width:375px){
-  .nb{font-size:9px;padding:7px 2px;min-width:36px}
-  .vi{width:50px;font-size:13px}
+  .nb{font-size:12px;padding:12px 11px}
+  .vi{width:54px;font-size:16px}
   .ag{grid-template-columns:1fr 1fr!important}
   .smv{font-size:14px}
-  .sbtn{font-size:12px;padding:10px 6px}
+  .sbtn{font-size:14px;padding:14px 6px}
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -988,6 +996,33 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
       <button class="sbv" id="alc-m-go" onclick="alcSubmit(false)" style="background:var(--gn)">✅ 送信して打刻</button>
     </div>
     <button onclick="alcSubmit(true)" style="display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--yw);font-size:12px;text-decoration:underline;cursor:pointer">📵 写真を撮れない場合はこちら（電話確認が必要になります）</button>
+  </div>
+</div>
+
+<!-- Alcohol NG (異常あり) Modal -->
+<div class="modal-ov" id="alcNgModal">
+  <div class="modal">
+    <div class="modal-title">⚠ 異常あり - 指示を選択</div>
+    <div id="alcng-info" style="font-size:12px;color:var(--dim);margin-bottom:10px"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px">
+        <input type="radio" name="alcng-type" value="recheck" checked style="width:18px;height:18px;accent-color:var(--yw)">
+        <span>🔄 再測定を指示<span style="font-size:11px;color:var(--dim)">（当日分の打刻を差し戻し、再チェック後にもう一度打刻させる）</span></span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px">
+        <input type="radio" name="alcng-type" value="noDrive" style="width:18px;height:18px;accent-color:var(--rd)">
+        <span>🚫 本日の運転禁止<span style="font-size:11px;color:var(--dim)">（打刻はそのまま・運転をさせない）</span></span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px">
+        <input type="radio" name="alcng-type" value="other" style="width:18px;height:18px;accent-color:var(--ac)">
+        <span>✏ その他の指示</span>
+      </label>
+    </div>
+    <div class="fr"><label class="fl">指示事項・補足（任意）</label><input type="text" class="fi" id="alcng-note" placeholder="例: 30分後に再測定して報告"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+      <button class="sbv" onclick="closeAlcNg()" style="background:var(--sf2);border:1px solid var(--bd);color:var(--dim)">キャンセル</button>
+      <button class="sbv" onclick="submitAlcNg()" style="background:var(--rd)">記録する</button>
+    </div>
   </div>
 </div>
 
@@ -3457,7 +3492,7 @@ function alcStatusLabel(c){
   if(c.status==='pending')return'<span style="color:var(--yw)">⏳ 管理者確認待ち</span>';
   if(c.status==='nophoto')return'<span style="color:var(--yw)">📵 写真なし・電話確認待ち</span>';
   if(c.status==='ok')return`<span style="color:var(--gn)">✅ 確認済み（${c.confirmedBy}）</span>`;
-  if(c.status==='ng')return`<span style="color:var(--rd)">🚫 異常あり${c.note?'：'+c.note:''}</span>`;
+  if(c.status==='ng')return`<span style="color:var(--rd)">🚫 異常あり${c.note?'：'+c.note:''}</span>${/再測定/.test(c.note||'')?'<br><span style="color:var(--yw);font-size:11px">⚠ 打刻が差し戻されています。画面を再読み込みして、再測定→もう一度打刻してください</span>':''}`;
   return'';
 }
 function renderAlcStatusSelf(){
@@ -3494,8 +3529,8 @@ function renderAlcQueue(){
         </div>
       </div>
       <div class="pend-btns">
-        <button class="app-btn ok" onclick="confirmAlcCheck('${c.id}',true)">✅ 酒気帯びなし</button>
-        <button class="app-btn ng" onclick="confirmAlcCheck('${c.id}',false)">⚠ 異常あり</button>
+        <button class="app-btn ok" onclick="confirmAlcCheck('${c.id}')">✅ 酒気帯びなし</button>
+        <button class="app-btn ng" onclick="openAlcNg('${c.id}')">⚠ 異常あり</button>
       </div>
     </div>`).join(''):'<div class="empty">未確認のチェックはありません ✨</div>';
   const histEl=document.getElementById('alcHistList');if(!histEl)return;
@@ -3504,29 +3539,90 @@ function renderAlcQueue(){
   const hist=alcChecks.filter(c=>(c.status==='ok'||c.status==='ng')&&ids.has(c.empId)&&c.date>=ck)
     .sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
   histEl.innerHTML=hist.length?hist.map(c=>`
-    <div style="display:flex;justify-content:space-between;gap:8px;padding:7px 4px;border-bottom:1px solid var(--bd);font-size:12px;flex-wrap:wrap">
-      <span>${c.status==='ok'?'✅':'🚫'} ${c.empName}（${c.type==='ci'?'出勤':'退勤'} ${c.date} ${c.time}）<b style="font-family:var(--mo);color:${alcValColor(c.val)}">${parseFloat(c.val||0).toFixed(2)}</b></span>
-      <span style="color:var(--dim)">${c.confirmedBy}／${c.confirmedAt||''}／${c.method||''}${c.note?'／指示: '+c.note:''}</span>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid var(--bd);font-size:12px;flex-wrap:wrap">
+      <span style="flex:1;min-width:200px">${c.status==='ok'?'✅':'🚫'} ${c.empName}（${c.type==='ci'?'出勤':'退勤'} ${c.date} ${c.time}）<b style="font-family:var(--mo);color:${alcValColor(c.val)}">${parseFloat(c.val||0).toFixed(2)}</b><br>
+      <span style="color:var(--dim);font-size:11px">${c.confirmedBy}／${c.confirmedAt||''}／${c.method||''}${c.note?'／指示: '+c.note:''}</span></span>
+      <button class="hbtn" onclick="reopenAlcCheck('${c.id}')" style="flex-shrink:0">↩ 判定を変更</button>
     </div>`).join(''):'<div class="empty">履歴はありません</div>';
 }
-function confirmAlcCheck(id,ok){
+function confirmAlcCheck(id){
+  // 「酒気帯びなし」判定（異常ありは openAlcNg → submitAlcNg 経由）
   const c=alcChecks.find(x=>x.id===id);if(!c)return;
   if(c.status==='ok'||c.status==='ng'){renderAlcQueue();return;} // 別の管理者が確認済み
-  let note=null;
-  if(!ok){
-    note=prompt('指示事項を入力してください（例: 本日運転禁止・再測定を指示）');
-    if(note===null)return;
-  }
-  c.status=ok?'ok':'ng';
+  c.status='ok';
   c.confirmedBy=curAcc()?.name||'';
   c.confirmedAt=alcNowStamp();
   c.method=c.photo?'カメラ画像確認':'電話等による対話確認';
-  if(note)c.note=note;
   const ph=c.photo;c.photo=null;
   saveAlcChecks();
   if(ph)alcDeletePhoto(ph); // 確認完了 → 写真は即削除（容量対策・確認記録は保持）
   renderAlcQueue();updateAlcBadge();renderAlcStatusSelf();
-  showToast(ok?'✅ 酒気帯びなしを記録しました':'⚠ 異常ありとして記録しました');
+  showToast('✅ 酒気帯びなしを記録しました');
+}
+// ── 異常あり: 指示選択モーダル ──
+let _alcNgId=null;
+function openAlcNg(id){
+  const c=alcChecks.find(x=>x.id===id);if(!c)return;
+  if(c.status==='ok'||c.status==='ng'){renderAlcQueue();return;}
+  _alcNgId=id;
+  const info=document.getElementById('alcng-info');
+  if(info)info.textContent=`対象: ${c.empName}（${c.type==='ci'?'🟢 出勤':'🔴 退勤'} ${c.date} ${c.time}／測定値 ${parseFloat(c.val||0).toFixed(2)} mg/L）`;
+  const note=document.getElementById('alcng-note');if(note)note.value='';
+  const rc=document.querySelector('input[name="alcng-type"][value="recheck"]');if(rc)rc.checked=true;
+  document.getElementById('alcNgModal').classList.add('open');
+}
+function closeAlcNg(){document.getElementById('alcNgModal').classList.remove('open');_alcNgId=null;}
+function submitAlcNg(){
+  const c=alcChecks.find(x=>x.id===_alcNgId);if(!c){closeAlcNg();return;}
+  const type=document.querySelector('input[name="alcng-type"]:checked')?.value||'other';
+  const extra=(document.getElementById('alcng-note')?.value||'').trim();
+  let note=type==='recheck'?'再測定指示':type==='noDrive'?'本日運転禁止':'';
+  if(extra)note=note?note+'／'+extra:extra;
+  if(!note)note='異常あり';
+  c.status='ng';
+  c.confirmedBy=curAcc()?.name||'';
+  c.confirmedAt=alcNowStamp();
+  c.method=c.photo?'カメラ画像確認':'電話等による対話確認';
+  c.note=note;
+  const ph=c.photo;c.photo=null;
+  let rolled=false;
+  if(type==='recheck')rolled=alcRollbackStamp(c);
+  saveAlcChecks();
+  if(ph)alcDeletePhoto(ph);
+  closeAlcNg();
+  renderAlcQueue();updateAlcBadge();renderAlcStatusSelf();
+  showToast(rolled?'🔄 異常あり・打刻を差し戻しました（再測定指示）':'⚠ 異常ありとして記録しました');
+}
+// ── 再測定指示: 当日打刻の差し戻し ──
+function alcRollbackStamp(c){
+  if(c.date!==todayKey()){showToast('⚠ 当日以外の打刻は差し戻せません。勤怠修正から変更してください');return false;}
+  const recs=records[c.empId]||[];
+  const rec=recs.find(r=>r.date===c.date);
+  if(c.type==='ci'){
+    if(rec&&rec.checkout){showToast('⚠ 既に退勤済みのため差し戻せません。勤怠修正から変更してください');return false;}
+    if(rec){rec.checkin=null;rec.checkinLoc=null;rec.workMinutes=null;rec.overtimeMinutes=null;}
+    todayMap[c.empId]={};
+  }else{
+    if(!rec||!rec.checkin){showToast('⚠ 出勤記録が見つからないため差し戻せません');return false;}
+    rec.checkout=null;rec.checkoutLoc=null;rec.workMinutes=null;rec.overtimeMinutes=null;rec.autoCheckout=false;
+    // 勤務中状態に戻す（本人の画面は再読み込みで反映される）
+    const td={checkinTime:rec.checkin,checkinDate:c.date,checkinLoc:rec.checkinLoc||null};
+    if(rec.fullTimeFlag)td.fullTimeFlag=true;
+    todayMap[c.empId]=td;
+  }
+  S.set('ka_records',records);
+  S.set('ka_today',todayMap);
+  return true;
+}
+// ── 判定の事後変更（確認済み → 未確認に戻す） ──
+function reopenAlcCheck(id){
+  const c=alcChecks.find(x=>x.id===id);if(!c)return;
+  if(!confirm(`${c.empName}（${c.type==='ci'?'出勤':'退勤'} ${c.date} ${c.time}）の判定「${c.status==='ok'?'酒気帯びなし':'異常あり'}」を取り消して未確認に戻しますか？\n※写真は削除済みのため、電話等での再確認になります`))return;
+  c.status='nophoto';
+  c.confirmedBy=null;c.confirmedAt=null;c.method=null;c.note=null;
+  saveAlcChecks();
+  renderAlcQueue();updateAlcBadge();renderAlcStatusSelf();
+  showToast('↩ 未確認に戻しました。確認キューから再判定してください');
 }
 // ── CSV出力用フォーマッタ ──
 function alcCsv(empId,dk,type){

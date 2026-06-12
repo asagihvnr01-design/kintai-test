@@ -970,6 +970,13 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
       <label class="fl">検知器の測定値 (mg/L)　<span style="color:var(--rd);font-size:11px;font-weight:400">必須（0.00でも入力）</span></label>
       <input type="number" class="fi" id="alc-m-val" placeholder="0.00" step="0.01" min="0" max="0.99">
     </div>
+    <div style="margin:2px 0 8px;padding:9px 10px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+        <input type="checkbox" id="alc-m-dchk" checked onchange="dchkHint()" style="width:18px;height:18px;accent-color:var(--ac)">
+        <span>🚗 直行直帰（打刻を所定時刻に揃える）</span>
+      </label>
+      <div id="alc-m-dchk-hint" style="font-size:11px;color:var(--dim);margin-top:4px;padding-left:26px"></div>
+    </div>
     <input type="file" id="alc-m-file" accept="image/*" capture="user" style="display:none" onchange="alcFileChosen(this)">
     <div style="text-align:center;margin:4px 0 10px">
       <img id="alc-m-prev" alt="撮影プレビュー" style="display:none;width:140px;height:140px;object-fit:cover;border-radius:10px;border:1px solid var(--bd);margin-bottom:6px">
@@ -1755,7 +1762,7 @@ async function confirmCheckin(){
   const odoVal=document.getElementById('ci-odo').value;
   if(odoVal){document.getElementById('odoNow').value=odoVal;calcOdoDiff();}
   // アルコール視認チェック（写真+測定値送信）を経て打刻
-  openAlcModal('emp','ci',()=>stamp('checkin',ftFlag));
+  openAlcModal('emp','ci',()=>stamp('checkin',ftFlag),ftFlag);
 }
 
 
@@ -3324,13 +3331,41 @@ async function alcDeletePhoto(path){
     method:'DELETE',headers:{'apikey':DB._key,'Authorization':'Bearer '+DB._key}});
   }catch(e){console.warn('alc photo delete failed:',path,e);}
 }
+// ── 直行直帰: 打刻時刻を所定勤務時刻に自動修正 ──
+let _dchkDefault=true;   // アプリ起動時はON（送信のたびに直近の選択を引き継ぐ）
+let _dchkOverride=null;  // {type:'ci'|'co', time:'HH:MM'} 打刻直前に消費
+function dchkTargetTime(type,ftFlag){
+  if(type==='ci')return ftFlag?settings.start:empStart(session.id);
+  return ftFlag?settings.end:empEnd(session.id);
+}
+function consumeDchk(stampType){ // stampType: 'checkin'|'checkout'
+  if(!_dchkOverride)return null;
+  if((stampType==='checkin'&&_dchkOverride.type==='ci')||(stampType==='checkout'&&_dchkOverride.type==='co')){
+    const t=_dchkOverride.time;_dchkOverride=null;return t;
+  }
+  return null;
+}
+function dchkHint(){
+  const hint=document.getElementById('alc-m-dchk-hint');
+  const cb=document.getElementById('alc-m-dchk');
+  if(!hint||!cb||!_alcCtx)return;
+  const lbl=_alcCtx.type==='ci'?'出勤':'退勤';
+  if(cb.checked){
+    hint.textContent=`チェック中: ${lbl}打刻は所定時刻 ${dchkTargetTime(_alcCtx.type,_alcCtx.ftFlag)} で記録されます`;
+    hint.style.color='var(--ac)';
+  }else{
+    hint.textContent=`チェックなし: ${lbl}打刻は実際の現在時刻で記録されます`;
+    hint.style.color='var(--dim)';
+  }
+}
 // ── 打刻前モーダル ──
-let _alcCtx=null; // {dom:'emp'|'adm', type:'ci'|'co', cb, blob}
-function openAlcModal(dom,type,cb){
+let _alcCtx=null; // {dom:'emp'|'adm', type:'ci'|'co', cb, blob, ftFlag}
+function openAlcModal(dom,type,cb,ftFlag){
   // 機能OFFアカウント・Supabase未接続時は従来通り直接打刻
   if(!alcFeatureOn()||!DB.configured()){cb();return;}
   if(isMonthLocked(todayKey().slice(0,7),session?.id)){showToast('🔒 この月はロックされています');return;}
-  _alcCtx={dom,type,cb,blob:null};
+  _dchkOverride=null; // 前回分の残留防止
+  _alcCtx={dom,type,cb,blob:null,ftFlag:!!ftFlag};
   const srcId=dom==='adm'?(type==='ci'?'aAlcVal':'aAlcValOut'):(type==='ci'?'alcVal':'alcValOut');
   const src=document.getElementById(srcId);
   document.getElementById('alc-m-val').value=src?.value||'';
@@ -3338,7 +3373,9 @@ function openAlcModal(dom,type,cb){
   const pv=document.getElementById('alc-m-prev');if(pv){pv.style.display='none';pv.removeAttribute('src');}
   const st=document.getElementById('alc-m-stat');if(st){st.textContent='📷 未撮影';st.style.color='var(--dim)';}
   const go=document.getElementById('alc-m-go');if(go){go.disabled=false;go.textContent='✅ 送信して打刻';}
+  const dc=document.getElementById('alc-m-dchk');if(dc)dc.checked=_dchkDefault;
   document.getElementById('alcModal').classList.add('open');
+  dchkHint();
 }
 function closeAlcModal(){document.getElementById('alcModal').classList.remove('open');_alcCtx=null;}
 function alcPickPhoto(){document.getElementById('alc-m-file').click();}
@@ -3388,6 +3425,10 @@ async function alcSubmit(skip){
       date:todayKey(),type:ctx.type,time:alcNowTime(),val:v,photo:photoPath,status,
       confirmedBy:null,confirmedAt:null,method:null,note:null});
     saveAlcChecks();
+    // 直行直帰: チェックONなら打刻時刻を所定時刻に上書き（酒気確認の記録は実時刻のまま）
+    const dc=document.getElementById('alc-m-dchk');
+    _dchkDefault=dc?dc.checked:true;
+    _dchkOverride=(dc&&dc.checked)?{type:ctx.type,time:dchkTargetTime(ctx.type,ctx.ftFlag)}:null;
     closeAlcModal();
     if(go){go.disabled=false;go.textContent='✅ 送信して打刻';}
     await ctx.cb();
@@ -3400,12 +3441,12 @@ async function alcSubmit(skip){
 function empCheckoutFlow(){
   const td=todayMap[session?.id];
   if(!td||!td.checkinTime){showToast('⚠ 先に出勤打刻してください');return;}
-  openAlcModal('emp','co',()=>stamp('checkout'));
+  openAlcModal('emp','co',()=>stamp('checkout'),td.fullTimeFlag||false);
 }
 function adminCheckoutFlow(){
   const td=todayMap[session?.id];
   if(!td||!td.checkinTime){showToast('⚠ 先に出勤打刻してください');return;}
-  openAlcModal('adm','co',()=>adminStamp('checkout'));
+  openAlcModal('adm','co',()=>adminStamp('checkout'),td.fullTimeFlag||false);
 }
 // ── 本人向けステータス表示 ──
 function alcLatest(empId,dk,type){
@@ -3510,7 +3551,9 @@ async function _stampInner(type,fullTimeFlag){
   if(isMonthLocked(dk0.slice(0,7),session?.id)){showToast('🔒 この月はロックされています');return;}
   const isAdmin=curAcc()?.role==='admin';
   const n=new Date();
-  const time=[n.getHours(),n.getMinutes()].map(x=>String(x).padStart(2,'0')).join(':');
+  // 直行直帰チェックON時は所定時刻で打刻（アルコールチェックモーダル経由でのみ設定される）
+  const _dchkT=consumeDchk(type);
+  const time=_dchkT||[n.getHours(),n.getMinutes()].map(x=>String(x).padStart(2,'0')).join(':');
   if(!todayMap[session.id])todayMap[session.id]={};
   const td=todayMap[session.id];
   const loc=await getLocForStamp();
@@ -3541,7 +3584,7 @@ async function _stampInner(type,fullTimeFlag){
       recalcOdoKm(session.id,dk0);
     }
     S.set('ka_records',records);
-    S.set('ka_today',todayMap);showToast('✅ 出勤を打刻しました');
+    S.set('ka_today',todayMap);showToast(_dchkT?`✅ 出勤を打刻しました（直行直帰: ${_dchkT}）`:'✅ 出勤を打刻しました');
       }else{
     if(!td.checkinTime){showToast('⚠ 先に出勤打刻してください');return;}
     td.checkoutTime=time;td.checkoutLoc=loc;
@@ -3552,7 +3595,7 @@ async function _stampInner(type,fullTimeFlag){
     S.set('ka_today',todayMap);
     // 出勤日(checkinDate)を基準に記録を保存（日付跨ぎ対応）
     autoSaveRecordA(td,td.checkinDate||todayKey());
-        showToast('✅ 退勤・記録を自動保存しました');
+        showToast(_dchkT?`✅ 退勤・記録を自動保存しました（直行直帰: ${_dchkT}）`:'✅ 退勤・記録を自動保存しました');
   }
 }
 
@@ -4047,7 +4090,7 @@ async function confirmAdminCheckin(){
   const ov=document.getElementById('aci-odo').value;
   if(ov){document.getElementById('aOdoNow').value=ov;aCalcOdo();}
   // アルコール視認チェック（写真+測定値送信）を経て打刻
-  openAlcModal('adm','ci',()=>adminStamp('checkin',ftFlag));
+  openAlcModal('adm','ci',()=>adminStamp('checkin',ftFlag),ftFlag);
 }
 
 // ── 管理者 打刻 ──
@@ -4055,7 +4098,9 @@ async function adminStamp(type,fullTimeFlag){
   const dk0a=todayKey();
   if(isMonthLocked(dk0a.slice(0,7),session?.id)){showToast('🔒 この月はロックされています');return;}
   const n=new Date();
-  const time=[n.getHours(),n.getMinutes()].map(x=>String(x).padStart(2,'0')).join(':');
+  // 直行直帰チェックON時は所定時刻で打刻（アルコールチェックモーダル経由でのみ設定される）
+  const _dchkTA=consumeDchk(type);
+  const time=_dchkTA||[n.getHours(),n.getMinutes()].map(x=>String(x).padStart(2,'0')).join(':');
   if(!todayMap[session.id])todayMap[session.id]={};
   const td=todayMap[session.id];
   // GPS - キャッシュ済み位置を使用（ポップアップなし）
@@ -4083,7 +4128,7 @@ async function adminStamp(type,fullTimeFlag){
       recalcOdoKm(session.id,dk0a);
     }
     S.set('ka_records',records);
-    S.set('ka_today',todayMap);showToast('✅ 出勤を打刻しました');
+    S.set('ka_today',todayMap);showToast(_dchkTA?`✅ 出勤を打刻しました（直行直帰: ${_dchkTA}）`:'✅ 出勤を打刻しました');
       }else{
     if(!td.checkinTime){showToast('⚠ 先に出勤打刻してください');return;}
     td.checkoutTime=time;td.checkoutLoc=loc;
@@ -4100,7 +4145,7 @@ async function adminStamp(type,fullTimeFlag){
     }
     if(wh)wh.textContent=toHHMM(w);if(oh)oh.textContent=toHHMM(ot);
     S.set('ka_today',todayMap);
-    adminAutoSave(td);showToast('✅ 退勤・記録を自動保存しました');
+    adminAutoSave(td);showToast(_dchkTA?`✅ 退勤・記録を自動保存しました（直行直帰: ${_dchkTA}）`:'✅ 退勤・記録を自動保存しました');
   }
 }
 function adminAutoSave(td){

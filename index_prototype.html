@@ -1298,14 +1298,38 @@ async function setupAdmin(){
   err.textContent='アカウント作成中...';err.style.color='var(--ac)';
   const email=SB.toEmail(user);
   const sr=await SB.signUp(email,pass);
-  if(sr.error){err.textContent='作成失敗: '+sr.error.message;err.style.color='var(--rd)';return;}
-  const si=await SB.signIn(email,pass);
-  if(si.error){err.textContent='アカウントを作成しました。登録したメールアドレスに確認メールが届いています。メール内のリンクをクリックしてからログインしてください。';err.style.color='var(--ac)';return;}
+  let sbUid=sr.user?.id||null;
+  if(sr.error){
+    // 既にAuth登録済み（前回の作成が途中で中断した場合など）→ サインインできれば続行
+    const si0=await SB.signIn(email,pass);
+    if(si0.error){
+      if(/confirm/i.test(si0.error.message||'')){
+        // パスワードは正しいがメール未確認 → アカウント情報は保存してログイン可能にする
+        _setupSaveLocal(name,user,pass,storeName,null);
+        err.textContent='アカウント情報を保存しました。メールの確認リンクをクリックするとログインできます（同じ端末なら確認前でもログイン可能です）。';err.style.color='var(--ac)';
+        showScreen('login');return;
+      }
+      err.textContent='作成失敗: '+sr.error.message;err.style.color='var(--rd)';return;
+    }
+    sbUid=si0.user?.id||null;
+  }else{
+    const si=await SB.signIn(email,pass);
+    if(si.error){
+      // メール確認が必要な場合でも、先にアカウント情報を保存してから案内する（保存前に中断しない）
+      _setupSaveLocal(name,user,pass,storeName,sbUid);
+      err.textContent='アカウントを作成・保存しました。確認メールのリンクをクリックするとログインできます（同じ端末なら確認前でもログイン可能です）。';err.style.color='var(--ac)';
+      showScreen('login');return;
+    }
+  }
+  _setupSaveLocal(name,user,pass,storeName,sbUid);
+  err.textContent='';showToast('✅ 役員アカウントと店舗を作成しました');showScreen('login');
+}
+function _setupSaveLocal(name,user,pass,storeName,sbUid){
   const storeId=uid('store');
   stores=[{id:storeId,name:storeName}];
   S.set('ka_stores',stores);
-  accounts=[{id:uid('exec'),name,username:user,password:pass,role:'executive',shortMin:30,supabaseUid:sr.user?.id}];
-  S.set('ka_accounts',accounts);err.textContent='';showToast('✅ 役員アカウントと店舗を作成しました');showScreen('login');
+  accounts=[{id:uid('exec'),name,username:user,password:pass,role:'executive',shortMin:30,supabaseUid:sbUid}];
+  S.set('ka_accounts',accounts);
 }
 async function doLogin(){
   const user=document.getElementById('li-user').value.trim(),pass=document.getElementById('li-pass').value;

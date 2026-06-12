@@ -1313,7 +1313,7 @@ async function setupAdmin(){
       if(/confirm/i.test(si0.error.message||'')){
         // パスワードは正しいがメール未確認 → アカウント情報は保存してログイン可能にする
         _setupSaveLocal(name,user,pass,storeName,null);
-        err.textContent='アカウント情報を保存しました。メールの確認リンクをクリックするとログインできます（同じ端末なら確認前でもログイン可能です）。';err.style.color='var(--ac)';
+        err.textContent='アカウント情報を保存しました。確認メールを待たずに、今設定したメールアドレスとパスワードでそのままログインできます。';err.style.color='var(--ac)';
         showScreen('login');return;
       }
       err.textContent='作成失敗: '+sr.error.message;err.style.color='var(--rd)';return;
@@ -1322,9 +1322,9 @@ async function setupAdmin(){
   }else{
     const si=await SB.signIn(email,pass);
     if(si.error){
-      // メール確認が必要な場合でも、先にアカウント情報を保存してから案内する（保存前に中断しない）
+      // メール確認待ち・既存登録メール等の場合でも、先にアカウント情報を保存してから案内する（保存前に中断しない）
       _setupSaveLocal(name,user,pass,storeName,sbUid);
-      err.textContent='アカウントを作成・保存しました。確認メールのリンクをクリックするとログインできます（同じ端末なら確認前でもログイン可能です）。';err.style.color='var(--ac)';
+      err.textContent='アカウント情報を保存しました。確認メールを待たずに、今設定したメールアドレスとパスワードでそのままログインできます。';err.style.color='var(--ac)';
       showScreen('login');return;
     }
   }

@@ -965,9 +965,9 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
 <div class="modal-ov" id="alcModal">
   <div class="modal">
     <div class="modal-title" id="alcModalTitle">🍃 アルコールチェック</div>
-    <p style="font-size:12px;color:var(--dim);margin-bottom:10px">検知器で測定し、<b style="color:var(--yw)">検知器と自分の顔が一緒に写るように</b>撮影してください。管理者が写真を確認します。</p>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:10px">検知器で測定し、検知器と自分の顔が一緒に写るように<b style="color:var(--rd);font-size:13px">測定中の様子を</b>撮影してください。管理者が写真を確認します。</p>
     <div class="fr">
-      <label class="fl">検知器の測定値 (mg/L)　<span style="color:var(--rd);font-size:11px;font-weight:400">必須（0.00でも入力）</span></label>
+      <label class="fl">検知器の測定値 (mg/L)　<span style="color:var(--dim);font-size:11px;font-weight:400">数値が出た場合のみ変更（既定 0.00）</span></label>
       <input type="number" class="fi" id="alc-m-val" placeholder="0.00" step="0.01" min="0" max="0.99">
     </div>
     <div style="margin:2px 0 8px;padding:9px 10px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px">
@@ -3368,7 +3368,7 @@ function openAlcModal(dom,type,cb,ftFlag){
   _alcCtx={dom,type,cb,blob:null,ftFlag:!!ftFlag};
   const srcId=dom==='adm'?(type==='ci'?'aAlcVal':'aAlcValOut'):(type==='ci'?'alcVal':'alcValOut');
   const src=document.getElementById(srcId);
-  document.getElementById('alc-m-val').value=src?.value||'';
+  document.getElementById('alc-m-val').value=src?.value||'0.00'; // 既定0.00（数値が出た場合のみ変更）
   document.getElementById('alcModalTitle').textContent=(type==='ci'?'🟢 出勤前':'🔴 退勤時')+' アルコールチェック';
   const pv=document.getElementById('alc-m-prev');if(pv){pv.style.display='none';pv.removeAttribute('src');}
   const st=document.getElementById('alc-m-stat');if(st){st.textContent='📷 未撮影';st.style.color='var(--dim)';}
@@ -3393,8 +3393,7 @@ async function alcFileChosen(inp){
 async function alcSubmit(skip){
   if(!_alcCtx)return;
   if(_actionGuard.has('alcSubmit'))return;
-  const v=document.getElementById('alc-m-val').value;
-  if(v===''){showToast('⚠ 検知器の測定値を入力してください（0.00でも入力）');return;}
+  const v=document.getElementById('alc-m-val').value||'0.00'; // 未入力は0.00として扱う
   if(!skip&&!_alcCtx.blob){showToast('⚠ 「📷 検知器と顔を撮影する」から撮影してください');return;}
   if(skip&&!confirm('写真なしで打刻しますか？\n管理者による電話等での確認が必要になります。'))return;
   _actionGuard.add('alcSubmit');

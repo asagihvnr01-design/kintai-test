@@ -1065,8 +1065,9 @@ let sbClient=null,sbRegClient=null,_currentToken=null;
 const SB={
   init(url,key){
     if(typeof supabase==='undefined')return;
-    sbClient=supabase.createClient(url,key);
-    sbRegClient=supabase.createClient(url,key,{auth:{persistSession:false}});
+    // ★プロトタイプ: Authセッションの保存キーも本番と分離（同一オリジン対策）。本番反映時はoptionsを外す
+    sbClient=supabase.createClient(url,key,{auth:{storageKey:'alctest-auth'}});
+    sbRegClient=supabase.createClient(url,key,{auth:{persistSession:false,storageKey:'alctest-reg'}});
     sbClient.auth.onAuthStateChange((_ev,sess)=>{_currentToken=sess?.access_token||null;});
   },
   async signUp(email,password){
@@ -1103,18 +1104,23 @@ function guardAction(key,fn){
   catch(e){_actionGuard.delete(key);throw e;}
 }
 
+// ★プロトタイプ: 本番アプリ(同一オリジン asagihvnr01-design.github.io/kintai/)とlocalStorageを完全分離するための物理キープレフィックス。
+// GitHub Pagesはプロジェクトが違っても同一オリジン=localStorage共有のため、これが無いと本番データを汚染する。
+// 本番反映時はこの仕組みごと削除し、素のキーに戻すこと
+const LS_PREFIX='alctest_';
+const LSK=k=>LS_PREFIX+k;
 const S={
-  get:k=>{try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},
+  get:k=>{try{return JSON.parse(localStorage.getItem(LSK(k)));}catch(e){return null;}},
   set:(k,v)=>{
-    try{localStorage.setItem(k,JSON.stringify(v));}catch(e){
+    try{localStorage.setItem(LSK(k),JSON.stringify(v));}catch(e){
       console.error('localStorage full:',e);
       if(typeof showToast==='function')showToast('⚠ ストレージ容量が上限に達しました。管理者に連絡してください。');
       return;
     }
     if(k!=='ka_session')DB._push(k,v);
   },
-  del:k=>localStorage.removeItem(k),
-  sizeKB:()=>{let t=0;for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);t+=k.length+(localStorage.getItem(k)||'').length;}return Math.round(t/1024);}
+  del:k=>localStorage.removeItem(LSK(k)),
+  sizeKB:()=>{let t=0;for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!k.startsWith(LS_PREFIX))continue;t+=k.length+(localStorage.getItem(k)||'').length;}return Math.round(t/1024);}
 };
 
 // ★プロトタイプ: テスト専用テーブル。本番反映時は必ず 'kv_store' に戻すこと
@@ -1137,7 +1143,7 @@ const DB={
     }
     if(this._url&&this._key)SB.init(this._url,this._key);
     // 起動時に未同期キーを復元
-    try{const saved=JSON.parse(localStorage.getItem('ka_dirty_keys')||'[]');saved.forEach(k=>this._dirtyKeys.add(k));}catch(e){}
+    try{const saved=JSON.parse(localStorage.getItem(LSK('ka_dirty_keys'))||'[]');saved.forEach(k=>this._dirtyKeys.add(k));}catch(e){}
   },
 
   configured(){return !!(this._url&&this._key);},
@@ -1152,7 +1158,7 @@ const DB={
   },
 
   _saveDirtyKeys(){
-    try{localStorage.setItem('ka_dirty_keys',JSON.stringify([...this._dirtyKeys]));}catch(e){}
+    try{localStorage.setItem(LSK('ka_dirty_keys'),JSON.stringify([...this._dirtyKeys]));}catch(e){}
   },
 
   // 最近フラッシュしたキーを追跡（pullで上書きされないよう保護）
@@ -1190,7 +1196,7 @@ const DB={
     if(!this._dirtyKeys.size||!this.configured())return;
     const keys=[...this._dirtyKeys];
     for(const k of keys){
-      const raw=localStorage.getItem(k);
+      const raw=localStorage.getItem(LSK(k));
       if(raw===null)continue;
       try{
         const v=JSON.parse(raw);
@@ -1230,7 +1236,7 @@ const DB={
         // 最近フラッシュしたキーは10秒間保護（Supabase反映遅延対策）
         const flushedAt=this._recentlyFlushed.get(r.key);
         if(flushedAt&&(now-flushedAt)<10000)return;
-        localStorage.setItem(r.key,JSON.stringify(r.value));
+        localStorage.setItem(LSK(r.key),JSON.stringify(r.value));
       });
       // 古い保護記録をクリア
       for(const[k,t] of this._recentlyFlushed){if(now-t>15000)this._recentlyFlushed.delete(k);}
@@ -1321,8 +1327,8 @@ async function doLogin(){
     if(!acc){err.textContent='メールアドレスまたはパスワードが正しくありません';err.style.color='var(--rd)';await SB.signOut();return;}
     session={id:acc.id};S.set('ka_session',session);err.textContent='';
     const rem=document.getElementById('li-remember');
-    if(rem&&rem.checked)localStorage.setItem('ka_remember',JSON.stringify({u:user,p:pass}));
-    else localStorage.removeItem('ka_remember');
+    if(rem&&rem.checked)localStorage.setItem(LSK('ka_remember'),JSON.stringify({u:user,p:pass}));
+    else localStorage.removeItem(LSK('ka_remember'));
     enterApp(acc);
   }else{
     // スタッフ：kv_storeで直接認証（メール不要）
@@ -1333,8 +1339,8 @@ async function doLogin(){
     if(!acc){err.textContent='ユーザー名またはパスワードが正しくありません';err.style.color='var(--rd)';return;}
     session={id:acc.id};S.set('ka_session',session);err.textContent='';
     const rem=document.getElementById('li-remember');
-    if(rem&&rem.checked)localStorage.setItem('ka_remember',JSON.stringify({u:user,p:pass}));
-    else localStorage.removeItem('ka_remember');
+    if(rem&&rem.checked)localStorage.setItem(LSK('ka_remember'),JSON.stringify({u:user,p:pass}));
+    else localStorage.removeItem(LSK('ka_remember'));
     enterApp(acc);
   }
 }
@@ -1349,14 +1355,14 @@ async function migrateAllAccounts(){
 }
 function restoreRemembered(){
   try{
-    const d=JSON.parse(localStorage.getItem('ka_remember')||'null');
+    const d=JSON.parse(localStorage.getItem(LSK('ka_remember'))||'null');
     if(d&&d.u&&d.p){
       const u=document.getElementById('li-user'),p=document.getElementById('li-pass'),r=document.getElementById('li-remember');
       if(u)u.value=d.u;if(p)p.value=d.p;if(r)r.checked=true;
     }
   }catch(e){}
 }
-async function doLogout(){stopGpsWatch();session=null;S.del('ka_session');localStorage.removeItem('ka_remember');await SB.signOut();showScreen('login');document.getElementById('li-user').value='';document.getElementById('li-pass').value='';const rc=document.getElementById('li-remember');if(rc)rc.checked=false;}
+async function doLogout(){stopGpsWatch();session=null;S.del('ka_session');localStorage.removeItem(LSK('ka_remember'));await SB.signOut();showScreen('login');document.getElementById('li-user').value='';document.getElementById('li-pass').value='';const rc=document.getElementById('li-remember');if(rc)rc.checked=false;}
 function enterApp(acc){
   if(!acc)acc=accounts.find(a=>a.id===session?.id);
   if(!acc){doLogout();return;}
@@ -2880,7 +2886,7 @@ function downloadFullBackup(){
   const data={};
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
-    if(k.startsWith('ka_'))try{data[k]=JSON.parse(localStorage.getItem(k));}catch(e){data[k]=localStorage.getItem(k);}
+    if(k.startsWith(LS_PREFIX+'ka_'))try{data[k.slice(LS_PREFIX.length)]=JSON.parse(localStorage.getItem(k));}catch(e){data[k.slice(LS_PREFIX.length)]=localStorage.getItem(k);}
   }
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
@@ -4656,7 +4662,7 @@ async function syncAndEnter(){
 function _flushWithKeepalive(){
   if(DB._dirtyKeys.size>0&&DB.configured()){
     for(const k of DB._dirtyKeys){
-      const raw=localStorage.getItem(k);if(!raw)continue;
+      const raw=localStorage.getItem(LSK(k));if(!raw)continue;
       try{
         const v=JSON.parse(raw);
         fetch(DB._url+'/rest/v1/'+KV_TABLE,{

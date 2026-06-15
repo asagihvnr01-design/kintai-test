@@ -457,31 +457,22 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
         <div class="si"><div class="sl">状態</div><div class="sv" id="wkSt" style="font-size:11px;color:var(--dim)">待機中</div></div>
       </div>
       <div class="loc-badge"><div class="loc-dot" id="locDot"></div><span id="locTxt">位置情報: 未取得</span></div>
+      <div id="alcStatusEmp" style="margin-top:8px"></div>
     </div>
     <div class="card">
-      <div class="ct">体調・アルコールチェック</div>
-      <div class="hg">
-        <div class="hc"><div class="hi">😊</div><div class="hl">体調</div><select class="hinp" id="healthSt"><option>良好</option><option>普通</option><option>不調</option></select></div>
-        <div class="hc"><div class="hi">🍃</div><div class="hl">アルコール 出勤時 (mg/L)</div><input type="number" class="hinp" id="alcVal" placeholder="0.00" step="0.01" min="0" max="0.99"></div>
-        <div class="hc"><div class="hi">🍃</div><div class="hl">アルコール 退勤時 (mg/L)</div><input type="number" class="hinp" id="alcValOut" placeholder="0.00" step="0.01" min="0" max="0.99"></div>
-      </div>
-      <div id="alcStatusEmp"></div>
-    </div>
-    <div class="card">
-      <div class="ct">走行距離（オドメーター）</div>
-      <div class="fr" style="margin-bottom:6px">
-        <label class="fl">現在のオドメーター総距離 (km)</label>
-        <input type="number" class="fi" id="odoNow" placeholder="例: 12450" min="0" step="0.1" oninput="calcOdoDiff()">
-        <div class="odo-h" id="odoHint"></div>
-      </div>
-      <button class="btn-odo" onclick="saveOdoOnly()">🚗 走行距離のみ保存</button>
-      <p style="font-size:11px;color:var(--yw);margin-top:6px;text-align:center">※ 休日利用時はこちらを記載してください</p>
+      <button class="btn-odo" onclick="openHolidayOdoModal()" style="width:100%">🚗 休日利用（走行距離のみ）</button>
+      <p style="font-size:11px;color:var(--yw);margin-top:6px;text-align:center">※ 出勤せず車両のみ使用した日はこちら（オドメーターのみ記録）</p>
     </div>
     <div class="fr" style="padding:0 1px 4px">
       <label class="fl">メモ</label>
       <input type="text" class="fi" id="todayMemo" placeholder="特記事項があれば入力">
     </div>
-    <p style="font-size:11px;color:var(--dim);text-align:center;margin-top:4px">💡 退勤ボタンを押すと自動で記録が保存されます</p>
+    <p style="font-size:11px;color:var(--dim);text-align:center;margin-top:4px">💡 出勤・退勤の打刻はそれぞれ写真チェック後に確定します</p>
+    <!-- データ保持用（非表示）: 体調・アルコール・ODOはモーダルで入力 -->
+    <div style="display:none" aria-hidden="true">
+      <select id="healthSt"><option>良好</option><option>普通</option><option>不調</option></select>
+      <input type="number" id="alcVal"><input type="number" id="alcValOut"><input type="number" id="odoNow">
+    </div>
   </div>
 
   <!-- VISITS -->
@@ -637,7 +628,6 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
     <div style="display:flex;align-items:center;gap:7px">
       <span id="adminBadge" style="font-size:12px;color:var(--yw);font-weight:700"></span>
       <button class="hbtn" onclick="manualSync()">🔄 更新</button>
-      <button class="hbtn" onclick="openSettings()">⚙ 設定</button>
       <button class="hbtn" id="adminLogoutBtn" onclick="doLogout()">ログアウト</button>
     </div>
   </div>
@@ -671,35 +661,23 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
           <div class="si"><div class="sl">状態</div><div class="sv" id="aWkSt" style="font-size:11px;color:var(--dim)">待機中</div></div>
         </div>
         <div class="loc-badge"><div class="loc-dot" id="aLocDot"></div><span id="aLocTxt">位置情報: 未取得</span></div>
+        <div id="alcStatusAdm" style="margin-top:8px"></div>
       </div>
     </div>
-    <div class="card" id="aHealthCard">
-      <div class="ct">体調・アルコールチェック</div>
-      <div class="hg">
-        <div class="hc"><div class="hi">😊</div><div class="hl">体調</div>
-          <select class="hinp" id="aHealthSt"><option>良好</option><option>普通</option><option>不調</option></select></div>
-        <div class="hc"><div class="hi">🍃</div><div class="hl">アルコール 出勤時 (mg/L)</div>
-          <input type="number" class="hinp" id="aAlcVal" placeholder="0.00" step="0.01" min="0" max="0.99"></div>
-        <div class="hc"><div class="hi">🍃</div><div class="hl">アルコール 退勤時 (mg/L)</div>
-          <input type="number" class="hinp" id="aAlcValOut" placeholder="0.00" step="0.01" min="0" max="0.99"></div>
-      </div>
-      <div id="alcStatusAdm"></div>
-    </div>
-    <div class="card" id="aOdoCard">
-      <div class="ct">走行距離（オドメーター）</div>
-      <div class="fr" style="margin-bottom:6px">
-        <label class="fl">現在のオドメーター総距離 (km)</label>
-        <input type="number" class="fi" id="aOdoNow" placeholder="例: 12450" min="0" step="0.1" oninput="aCalcOdo()">
-        <div class="odo-h" id="aOdoHint"></div>
-      </div>
-      <button class="btn-odo" onclick="aSaveOdoOnly()">🚗 走行距離のみ保存</button>
-      <p style="font-size:11px;color:var(--yw);margin-top:6px;text-align:center">※ 休日利用時はこちらを記載してください</p>
+    <div class="card">
+      <button class="btn-odo" onclick="openHolidayOdoModal()" style="width:100%">🚗 休日利用（走行距離のみ）</button>
+      <p style="font-size:11px;color:var(--yw);margin-top:6px;text-align:center">※ 出勤せず車両のみ使用した日はこちら（オドメーターのみ記録）</p>
     </div>
     <div class="fr" style="padding:0 1px 4px">
       <label class="fl">メモ</label>
       <input type="text" class="fi" id="aTodayMemo" placeholder="特記事項があれば入力">
     </div>
-    <p style="font-size:11px;color:var(--dim);text-align:center;margin-top:4px">💡 退勤ボタンを押すと自動で記録が保存されます</p>
+    <p style="font-size:11px;color:var(--dim);text-align:center;margin-top:4px">💡 出勤・退勤の打刻はそれぞれ写真チェック後に確定します</p>
+    <!-- データ保持用（非表示）: 体調・アルコール・ODOはモーダルで入力 -->
+    <div style="display:none" aria-hidden="true">
+      <select id="aHealthSt"><option>良好</option><option>普通</option><option>不調</option></select>
+      <input type="number" id="aAlcVal"><input type="number" id="aAlcValOut"><input type="number" id="aOdoNow">
+    </div>
   </div>
 
   <!-- ADMIN: 酒気帯び確認 -->
@@ -897,6 +875,34 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
   </div>
   <div style="padding:13px">
     <div class="card">
+      <div class="ct">🕐 今日（自分の打刻）</div>
+      <div class="clk-wrap">
+        <div class="clk" id="clock3">--:--:--</div>
+        <div class="clk-d" id="clockDate3"></div>
+      </div>
+      <div class="stamp-row">
+        <button class="sbtn ci" id="eCiBtn" onclick="execCheckinFlow()"><span>🟢 出勤</span><span class="sub" id="eCiTime">未打刻</span></button>
+        <button class="sbtn co" id="eCoBtn" onclick="execCheckoutFlow()"><span>🔴 退勤</span><span class="sub" id="eCoTime">未打刻</span></button>
+      </div>
+      <div class="sg">
+        <div class="si"><div class="sl">勤務時間</div><div class="sv" id="eWkH" style="color:var(--ac)">--:--</div></div>
+        <div class="si"><div class="sl">残業時間</div><div class="sv" id="eOtH" style="color:var(--ac2)">--:--</div></div>
+        <div class="si"><div class="sl">状態</div><div class="sv" id="eWkSt" style="font-size:11px;color:var(--dim)">待機中</div></div>
+      </div>
+      <div class="loc-badge"><div class="loc-dot" id="eLocDot"></div><span id="eLocTxt">位置情報: 未取得</span></div>
+      <div id="alcStatusExec" style="margin-top:8px"></div>
+      <button class="btn-odo" onclick="openHolidayOdoModal()" style="width:100%;margin-top:10px">🚗 休日利用（走行距離のみ）</button>
+      <div class="fr" style="padding:8px 1px 0">
+        <label class="fl">メモ</label>
+        <input type="text" class="fi" id="eTodayMemo" placeholder="特記事項があれば入力">
+      </div>
+      <!-- データ保持用（非表示） -->
+      <div style="display:none" aria-hidden="true">
+        <select id="eHealthSt"><option>良好</option><option>普通</option><option>不調</option></select>
+        <input type="number" id="eAlcVal"><input type="number" id="eAlcValOut"><input type="number" id="eOdoNow">
+      </div>
+    </div>
+    <div class="card">
       <div class="ct">📊 全店舗サマリー</div>
       <div id="execSummary"></div>
     </div>
@@ -926,10 +932,10 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
   <div class="modal">
     <div class="modal-title">🟢 出勤する</div>
     <div style="font-family:var(--mo);font-size:34px;text-align:center;color:var(--gn);margin-bottom:14px" id="ciModalTime">--:--</div>
-    <div class="fr">
-      <label class="fl">オドメーター総距離 (km)　<span style="color:var(--dim);font-size:11px;font-weight:400">任意</span></label>
-      <input type="number" class="fi" id="ci-odo" placeholder="例: 12450" min="0" step="0.1">
-      <div class="odo-h" id="ci-odo-h"></div>
+    <div style="background:var(--sf2);border:2px solid var(--gn);border-radius:12px;padding:14px;margin-bottom:10px">
+      <label class="fl" style="font-size:14px;font-weight:700;text-align:center;display:block;margin-bottom:8px">🚗 オドメーター総距離 (km) <span style="color:var(--rd)">必須</span></label>
+      <input type="number" class="fi" id="ci-odo" placeholder="例: 12450" min="0" step="0.1" oninput="ciOdoHint()" style="font-size:24px;text-align:center;font-family:var(--mo);height:auto;padding:12px">
+      <div class="odo-h" id="ci-odo-h" style="text-align:center;margin-top:6px"></div>
     </div>
     <div id="ci-ft-wrap" style="display:none;margin:8px 0;padding:10px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
@@ -950,10 +956,10 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
   <div class="modal">
     <div class="modal-title">🟢 出勤する（管理者）</div>
     <div style="font-family:var(--mo);font-size:34px;text-align:center;color:var(--gn);margin-bottom:14px" id="aciModalTime">--:--</div>
-    <div class="fr">
-      <label class="fl">オドメーター総距離 (km)　<span style="color:var(--dim);font-size:11px">任意</span></label>
-      <input type="number" class="fi" id="aci-odo" placeholder="例: 12450" min="0" step="0.1">
-      <div class="odo-h" id="aci-odo-h"></div>
+    <div style="background:var(--sf2);border:2px solid var(--gn);border-radius:12px;padding:14px;margin-bottom:10px">
+      <label class="fl" style="font-size:14px;font-weight:700;text-align:center;display:block;margin-bottom:8px">🚗 オドメーター総距離 (km) <span style="color:var(--rd)">必須</span></label>
+      <input type="number" class="fi" id="aci-odo" placeholder="例: 12450" min="0" step="0.1" oninput="aciOdoHint()" style="font-size:24px;text-align:center;font-family:var(--mo);height:auto;padding:12px">
+      <div class="odo-h" id="aci-odo-h" style="text-align:center;margin-top:6px"></div>
     </div>
     <div id="aci-ft-wrap" style="display:none;margin:8px 0;padding:10px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
@@ -969,14 +975,59 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
   </div>
 </div>
 
+<!-- Executive Checkin Modal -->
+<div class="modal-ov" id="eciModal">
+  <div class="modal">
+    <div class="modal-title">🟢 出勤する（役員）</div>
+    <div style="font-family:var(--mo);font-size:34px;text-align:center;color:var(--gn);margin-bottom:14px" id="eciModalTime">--:--</div>
+    <div style="background:var(--sf2);border:2px solid var(--gn);border-radius:12px;padding:14px;margin-bottom:10px">
+      <label class="fl" style="font-size:14px;font-weight:700;text-align:center;display:block;margin-bottom:8px">🚗 オドメーター総距離 (km) <span style="color:var(--rd)">必須</span></label>
+      <input type="number" class="fi" id="eci-odo" placeholder="例: 12450" min="0" step="0.1" oninput="eciOdoHint()" style="font-size:24px;text-align:center;font-family:var(--mo);height:auto;padding:12px">
+      <div class="odo-h" id="eci-odo-h" style="text-align:center;margin-top:6px"></div>
+    </div>
+    <div id="eci-ft-wrap" style="display:none;margin:8px 0;padding:10px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+        <input type="checkbox" id="eci-fulltime" style="width:18px;height:18px;accent-color:var(--ac)">
+        <span>📋 常勤時間で出勤する</span>
+      </label>
+      <div style="font-size:11px;color:var(--dim);margin-top:4px;padding-left:26px" id="eci-ft-hint"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+      <button class="sbv" onclick="closeExecCheckinModal()" style="background:var(--sf2);border:1px solid var(--bd);color:var(--dim)">キャンセル</button>
+      <button class="sbv" onclick="confirmExecCheckin()" style="background:var(--gn)">出勤する</button>
+    </div>
+  </div>
+</div>
+
+<!-- Holiday (ODO only) Modal -->
+<div class="modal-ov" id="holidayOdoModal">
+  <div class="modal">
+    <div class="modal-title">🚗 休日利用（走行距離のみ）</div>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:10px">出勤せず車両のみ使用した日の記録です。オドメーター総距離だけを入力してください（写真・アルコールチェックは不要）。</p>
+    <div style="background:var(--sf2);border:2px solid var(--yw);border-radius:12px;padding:14px;margin-bottom:10px">
+      <label class="fl" style="font-size:14px;font-weight:700;text-align:center;display:block;margin-bottom:8px">🚗 オドメーター総距離 (km) <span style="color:var(--rd)">必須</span></label>
+      <input type="number" class="fi" id="hol-odo" placeholder="例: 12450" min="0" step="0.1" oninput="holOdoHint()" style="font-size:24px;text-align:center;font-family:var(--mo);height:auto;padding:12px">
+      <div class="odo-h" id="hol-odo-h" style="text-align:center;margin-top:6px"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+      <button class="sbv" onclick="closeHolidayOdoModal()" style="background:var(--sf2);border:1px solid var(--bd);color:var(--dim)">キャンセル</button>
+      <button class="sbv" onclick="submitHolidayOdo()" style="background:var(--yw);color:#000">送信して記録</button>
+    </div>
+  </div>
+</div>
+
 <!-- Alcohol Visual Check Modal -->
 <div class="modal-ov" id="alcModal">
   <div class="modal">
     <div class="modal-title" id="alcModalTitle">🍃 アルコールチェック</div>
     <p style="font-size:12px;color:var(--dim);margin-bottom:10px">検知器で測定し、検知器と自分の顔が一緒に写るように<b style="color:var(--rd);font-size:13px">測定中の様子を</b>撮影してください。管理者が写真を確認します。</p>
     <div class="fr">
-      <label class="fl">検知器の測定値 (mg/L)　<span style="color:var(--dim);font-size:11px;font-weight:400">数値が出た場合のみ変更（既定 0.00）</span></label>
+      <label class="fl" id="alc-m-val-lbl">検知器の測定値 (mg/L)　<span style="color:var(--dim);font-size:11px;font-weight:400">数値が出た場合のみ変更（既定 0.00）</span></label>
       <input type="number" class="fi" id="alc-m-val" placeholder="0.00" step="0.01" min="0" max="0.99">
+    </div>
+    <div class="fr" id="alc-m-health-row">
+      <label class="fl">😊 体調　<span style="color:var(--dim);font-size:11px;font-weight:400">変更なければ「良好」のままでOK</span></label>
+      <select class="fi" id="alc-m-health"><option>良好</option><option>普通</option><option>不調</option></select>
     </div>
     <div style="margin:2px 0 8px;padding:9px 10px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
@@ -991,10 +1042,8 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
       <div id="alc-m-stat" style="font-size:12px;color:var(--dim);margin-bottom:8px">📷 未撮影</div>
       <button class="sbv" onclick="alcPickPhoto()" style="background:var(--sf2);border:1px solid var(--bd)">📷 検知器と顔を撮影する</button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
-      <button class="sbv" onclick="closeAlcModal()" style="background:var(--sf2);border:1px solid var(--bd);color:var(--dim)">キャンセル</button>
-      <button class="sbv" id="alc-m-go" onclick="alcSubmit(false)" style="background:var(--gn)">✅ 送信して打刻</button>
-    </div>
+    <button class="sbv" id="alc-m-go" onclick="alcSubmit(false)" style="background:var(--gn);width:100%;font-size:18px;font-weight:700;padding:16px;margin-top:4px">✅ 送信して打刻</button>
+    <button class="sbv" onclick="closeAlcModal()" style="background:var(--sf2);border:1px solid var(--bd);color:var(--dim);width:100%;margin-top:8px">キャンセル</button>
     <button onclick="alcSubmit(true)" style="display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--yw);font-size:12px;text-decoration:underline;cursor:pointer">📵 写真を撮れない場合はこちら（電話確認が必要になります）</button>
   </div>
 </div>
@@ -1446,7 +1495,7 @@ function enterApp(acc){
   initGpsForAccount(); // 後方互換用（現在は空関数）
   checkPendingAutoCheckout();
   if(acc.role==='executive'){
-    showScreen('exec');renderExecScreen();
+    showScreen('exec');renderExecScreen();execRefreshStampUI();renderAlcStatusSelf();
     const eb=document.getElementById('execBadge');if(eb)eb.textContent='👔 '+acc.name;
   }
   else if(acc.role==='admin'){
@@ -1613,15 +1662,21 @@ function updateClock(){
   const n=new Date();
   document.getElementById('clock').textContent=[n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');
   const ds=`${n.getFullYear()}年${n.getMonth()+1}月${n.getDate()}日（${'日月火水木金土'[n.getDay()]}）`;
-  ['clockDate','hdrDate','adminDate','clockDate2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=ds;});
-  const c2=document.getElementById('clock2');if(c2)c2.textContent=[n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');
-  if(session&&(curAcc()?.role==='admin'||curAcc()?.role==='executive')){const tdA=todayMap[session.id]||{};if(tdA.checkinTime&&!tdA.checkoutTime)renderWorkHoursA(toMins(tdA.checkinTime),n.getHours()*60+n.getMinutes());}
+  ['clockDate','hdrDate','adminDate','clockDate2','clockDate3'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=ds;});
+  const hms=[n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');
+  const c2=document.getElementById('clock2');if(c2)c2.textContent=hms;
+  const c3=document.getElementById('clock3');if(c3)c3.textContent=hms;
+  if(session&&curAcc()?.role==='admin'){const tdA=todayMap[session.id]||{};if(tdA.checkinTime&&!tdA.checkoutTime)renderWorkHoursA(toMins(tdA.checkinTime),n.getHours()*60+n.getMinutes());}
+  if(session&&curAcc()?.role==='executive'){const tdE=todayMap[session.id]||{};if(tdE.checkinTime&&!tdE.checkoutTime)renderWorkHoursE(toMins(tdE.checkinTime),n.getHours()*60+n.getMinutes());}
   if(session){const td=todayMap[session.id]||{};if(td.checkinTime&&!td.checkoutTime)renderWorkHours(toMins(td.checkinTime),n.getHours()*60+n.getMinutes());}
-  // Update checkin modal clock (スタッフ・管理者両方)
+  // Update checkin modal clock (スタッフ・管理者・役員)
+  const hm=[n.getHours(),n.getMinutes()].map(x=>String(x).padStart(2,'0')).join(':');
   const cmt=document.getElementById('ciModalTime');
-  if(cmt&&document.getElementById('ciModal').classList.contains('open'))cmt.textContent=[n.getHours(),n.getMinutes()].map(x=>String(x).padStart(2,'0')).join(':');
+  if(cmt&&document.getElementById('ciModal').classList.contains('open'))cmt.textContent=hm;
   const acmt=document.getElementById('aciModalTime');
-  if(acmt&&document.getElementById('aciModal')?.classList.contains('open'))acmt.textContent=[n.getHours(),n.getMinutes()].map(x=>String(x).padStart(2,'0')).join(':');
+  if(acmt&&document.getElementById('aciModal')?.classList.contains('open'))acmt.textContent=hm;
+  const ecmt=document.getElementById('eciModalTime');
+  if(ecmt&&document.getElementById('eciModal')?.classList.contains('open'))ecmt.textContent=hm;
   // 日付変更検知: 0時を跨いだらボタン状態をリセット
   const curDate=todayKey();
   if(lastDateKey&&lastDateKey!==curDate&&session){
@@ -1751,7 +1806,7 @@ async function getLocForStamp(){
   if(S.get('ka_gps_off')===true)return null;
   const feat=getAdminFeatures();
   if(feat.kintai===false)return null;
-  const dots=['locDot','aLocDot'],txts=['locTxt','aLocTxt'];
+  const dots=['locDot','aLocDot','eLocDot'],txts=['locTxt','aLocTxt','eLocTxt'];
   dots.forEach(id=>{const el=document.getElementById(id);if(el)el.className='loc-dot';});
   txts.forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='📡 位置情報取得中...';});
   return new Promise(resolve=>{
@@ -1803,12 +1858,54 @@ function openCheckinModal(){
 }
 function closeCheckinModal(){document.getElementById('ciModal').classList.remove('open');}
 async function confirmCheckin(){
+  const odoVal=document.getElementById('ci-odo').value;
+  if(!odoVal||isNaN(parseFloat(odoVal))){const h=document.getElementById('ci-odo-h');if(h)h.innerHTML='<span style="color:var(--rd)">⚠ オドメーター値を入力してください</span>';return;}
   const ftFlag=document.getElementById('ci-fulltime')?.checked||false;
   closeCheckinModal();
-  const odoVal=document.getElementById('ci-odo').value;
-  if(odoVal){document.getElementById('odoNow').value=odoVal;calcOdoDiff();}
-  // アルコール視認チェック（写真+測定値送信）を経て打刻
+  document.getElementById('odoNow').value=odoVal;
+  // アルコール視認チェック（写真+体調+測定値送信）を経て打刻
   openAlcModal('emp','ci',()=>stamp('checkin',ftFlag),ftFlag);
+}
+// 出退勤モーダルのODO入力ヒント（必須化）
+function _odoHintHtml(v){
+  const last=getLastOdo(session?.id);
+  if(!v)return last!=null?`前回ODO: <span>${last.toFixed(1)} km</span>`:'初回入力です';
+  const num=parseFloat(v);if(isNaN(num))return'数値を入力してください';
+  if(last==null)return`初回入力 — <span>${num.toFixed(1)} km</span>`;
+  if(num<=last)return`<span style="color:var(--yw)">⚠ 前回値（${last.toFixed(1)} km）より小さいです</span>`;
+  return`本日走行距離: <span>${(num-last).toFixed(1)} km</span>（前回ODO: ${last.toFixed(1)} km）`;
+}
+function ciOdoHint(){const h=document.getElementById('ci-odo-h');if(h)h.innerHTML=_odoHintHtml(document.getElementById('ci-odo').value);}
+function aciOdoHint(){const h=document.getElementById('aci-odo-h');if(h)h.innerHTML=_odoHintHtml(document.getElementById('aci-odo').value);}
+function eciOdoHint(){const h=document.getElementById('eci-odo-h');if(h)h.innerHTML=_odoHintHtml(document.getElementById('eci-odo').value);}
+function holOdoHint(){const h=document.getElementById('hol-odo-h');if(h)h.innerHTML=_odoHintHtml(document.getElementById('hol-odo').value);}
+// ── 休日利用（走行距離のみ）モーダル: 全ロール共通 ──
+function openHolidayOdoModal(){
+  if(!session)return;
+  if(isMonthLocked(todayKey().slice(0,7),session?.id)){showToast('🔒 この月はロックされています');return;}
+  const inp=document.getElementById('hol-odo');if(inp)inp.value='';
+  holOdoHint();
+  document.getElementById('holidayOdoModal').classList.add('open');
+}
+function closeHolidayOdoModal(){document.getElementById('holidayOdoModal').classList.remove('open');}
+function submitHolidayOdo(){
+  if(!session)return;
+  const dk=todayKey();
+  if(isMonthLocked(dk.slice(0,7),session?.id)){showToast('🔒 この月はロックされています');return;}
+  const odoStr=document.getElementById('hol-odo').value;
+  if(!odoStr||isNaN(parseFloat(odoStr))){const h=document.getElementById('hol-odo-h');if(h)h.innerHTML='<span style="color:var(--rd)">⚠ オドメーター値を入力してください</span>';return;}
+  const odoNum=parseFloat(odoStr);
+  const empId=session.id;
+  if(!records[empId])records[empId]=[];
+  const rec=records[empId].find(r=>r.date===dk);
+  // 休日利用=ODOのみ記録（出勤/退勤・体調・アルコールは付けない）
+  if(rec){rec.odometer=odoNum;rec.todayKm=null;}
+  else records[empId].unshift({date:dk,odometer:odoNum,todayKm:null});
+  records[empId].sort((a,b)=>b.date.localeCompare(a.date));
+  recalcOdoKm(empId,dk);
+  S.set('ka_records',records);
+  closeHolidayOdoModal();
+  showToast('🚗 休日利用（走行距離）を記録しました');
 }
 
 
@@ -3452,15 +3549,30 @@ function dchkHint(){
 }
 // ── 打刻前モーダル ──
 let _alcCtx=null; // {dom:'emp'|'adm', type:'ci'|'co', cb, blob, ftFlag}
+// dom: 'emp'|'adm'|'exec' に応じた体調・アルコールの隠しキャリアID
+function alcEls(dom){
+  if(dom==='adm')return{h:'aHealthSt',a:'aAlcVal',ao:'aAlcValOut'};
+  if(dom==='exec')return{h:'eHealthSt',a:'eAlcVal',ao:'eAlcValOut'};
+  return{h:'healthSt',a:'alcVal',ao:'alcValOut'};
+}
 function openAlcModal(dom,type,cb,ftFlag){
   // 機能OFFアカウント・Supabase未接続時は従来通り直接打刻
   if(!alcFeatureOn()||!DB.configured()){cb();return;}
   if(isMonthLocked(todayKey().slice(0,7),session?.id)){showToast('🔒 この月はロックされています');return;}
   _dchkOverride=null; // 前回分の残留防止
   _alcCtx={dom,type,cb,blob:null,ftFlag:!!ftFlag};
-  const srcId=dom==='adm'?(type==='ci'?'aAlcVal':'aAlcValOut'):(type==='ci'?'alcVal':'alcValOut');
-  const src=document.getElementById(srcId);
+  const els=alcEls(dom);
+  const src=document.getElementById(type==='ci'?els.a:els.ao);
   document.getElementById('alc-m-val').value=src?.value||'0.00'; // 既定0.00（数値が出た場合のみ変更）
+  // 体調は出勤時のみ表示（退勤時は非表示）。既定は良好。
+  const hRow=document.getElementById('alc-m-health-row');
+  const hSel=document.getElementById('alc-m-health');
+  if(type==='ci'){
+    if(hRow)hRow.style.display='';
+    if(hSel)hSel.value=document.getElementById(els.h)?.value||'良好';
+  }else if(hRow){hRow.style.display='none';}
+  const vlbl=document.getElementById('alc-m-val-lbl');
+  if(vlbl)vlbl.innerHTML=(type==='ci'?'出勤時':'退勤時')+'の検知器測定値 (mg/L)　<span style="color:var(--dim);font-size:11px;font-weight:400">数値が出た場合のみ変更（既定 0.00）</span>';
   document.getElementById('alcModalTitle').textContent=(type==='ci'?'🟢 出勤前':'🔴 退勤時')+' アルコールチェック';
   const pv=document.getElementById('alc-m-prev');if(pv){pv.style.display='none';pv.removeAttribute('src');}
   const st=document.getElementById('alc-m-stat');if(st){st.textContent='📷 未撮影';st.style.color='var(--dim)';}
@@ -3468,6 +3580,9 @@ function openAlcModal(dom,type,cb,ftFlag){
   const dc=document.getElementById('alc-m-dchk');if(dc)dc.checked=_dchkDefault;
   document.getElementById('alcModal').classList.add('open');
   dchkHint();
+  // 簡略化: モーダルを開いたら即カメラを起動（撮影ボタンのタップを省略）。
+  // ※ボタン押下のユーザー操作内で同期的に呼ぶ必要があるためsetTimeoutは使わない。
+  try{alcPickPhoto();}catch(e){}
 }
 function closeAlcModal(){document.getElementById('alcModal').classList.remove('open');_alcCtx=null;}
 function alcPickPhoto(){document.getElementById('alc-m-file').click();}
@@ -3491,9 +3606,13 @@ async function alcSubmit(skip){
   _actionGuard.add('alcSubmit');
   const ctx=_alcCtx;
   try{
-    // 測定値を今日タブの入力欄へ反映（既存の保存経路=autoSave/MERGEで記録に残る）
-    const tgtId=ctx.dom==='adm'?(ctx.type==='ci'?'aAlcVal':'aAlcValOut'):(ctx.type==='ci'?'alcVal':'alcValOut');
-    const tgt=document.getElementById(tgtId);if(tgt)tgt.value=v;
+    // 測定値・体調を今日タブの隠し入力欄へ反映（既存の保存経路=autoSave/MERGEで記録に残る）
+    const els=alcEls(ctx.dom);
+    const tgt=document.getElementById(ctx.type==='ci'?els.a:els.ao);if(tgt)tgt.value=v;
+    if(ctx.type==='ci'){ // 体調は出勤時のみ。既定は良好。
+      const hv=document.getElementById('alc-m-health')?.value||'良好';
+      const hCarrier=document.getElementById(els.h);if(hCarrier)hCarrier.value=hv;
+    }
     const go=document.getElementById('alc-m-go');
     if(go){go.disabled=true;go.textContent='送信中...';}
     let photoPath=null,status='nophoto';
@@ -3560,6 +3679,7 @@ function renderAlcStatusSelf(){
     <div>🍃 出勤時チェック: ${alcStatusLabel(ci)}</div><div>🍃 退勤時チェック: ${alcStatusLabel(co)}</div></div>`:'';
   const e1=document.getElementById('alcStatusEmp');if(e1)e1.innerHTML=html;
   const e2=document.getElementById('alcStatusAdm');if(e2)e2.innerHTML=html;
+  const e3=document.getElementById('alcStatusExec');if(e3)e3.innerHTML=html;
 }
 // ── 管理者向け確認キュー ──
 function updateAlcBadge(){
@@ -4141,15 +4261,14 @@ async function manualSync(){
 // ═══════════════════════════════════
 
 // ── 管理者の入力機能設定 ──
+// 勤怠・体調・ODOは全員必須化したためトグル廃止（常に有効）。訪問・有給のみ表示制御可。
 const ADMIN_FEATURE_DEFS=[
-  {key:'kintai', label:'勤怠打刻（出勤・退勤）',  note:'※3項目すべてOFFで「今日」タブが非表示になります'},
-  {key:'health', label:'体調・アルコールチェック', note:'※3項目すべてOFFで「今日」タブが非表示になります'},
-  {key:'odo',    label:'走行距離（オドメーター）', note:'※3項目すべてOFFで「今日」タブが非表示になります'},
   {key:'visits', label:'訪問実績', note:''},
   {key:'leave',  label:'有給台帳', note:''},
 ];
-function getAdminFeatures(){return curAcc()?.adminFeatures||{kintai:true,health:true,odo:true,visits:true,leave:true};}
-function getAccFeatures(empId){const acc=accounts.find(a=>a.id===empId);return acc?.adminFeatures||{kintai:true,health:true,odo:true,visits:true,leave:true};}
+// kintai/health/odo は保存値に関わらず常にtrue（出勤ボタン非表示等の旧機能は廃止）
+function getAdminFeatures(){const f=curAcc()?.adminFeatures||{};return {kintai:true,health:true,odo:true,visits:f.visits!==false,leave:f.leave!==false};}
+function getAccFeatures(empId){const acc=accounts.find(a=>a.id===empId);const f=acc?.adminFeatures||{};return {kintai:true,health:true,odo:true,visits:f.visits!==false,leave:f.leave!==false};}
 function renderAdminFeatureToggles(){
   const feat=getAdminFeatures();
   const el=document.getElementById('adminFeatureToggles');if(!el)return;
@@ -4175,28 +4294,8 @@ function setAdminFeature(key,val){
   applyAdminNavVisibility();
 }
 function applyAdminFeatureVisibility(){
-  const feat=getAdminFeatures();
-  // 打刻エリア（打刻ボタン・勤務時間・位置情報）
-  const sa=document.getElementById('aStampArea');
-  if(sa)sa.style.display=feat.kintai!==false?'':'none';
-  // 勤怠・運行管理表カード
-  const hc=document.getElementById('aHealthCard');
-  if(hc)hc.style.display=feat.health!==false?'':'none';
-  // 走行距離カード
-  const oc=document.getElementById('aOdoCard');
-  if(oc)oc.style.display=feat.odo!==false?'':'none';
-  // 今日タブ：勤怠・体調・走行距離がすべてOFFなら今日タブ自体を非表示
-  const todayAllOff=(feat.kintai===false)&&(feat.health===false)&&(feat.odo===false);
-  document.querySelectorAll('#adminNav .nb').forEach(btn=>{
-    const onclick=btn.getAttribute('onclick')||'';
-    if(!onclick.includes("showAdminPg('today'"))return;
-    btn.style.display=todayAllOff?'none':'block';
-    // 今日タブが非表示になったとき、それがアクティブなら次のタブへ移動
-    if(todayAllOff&&btn.classList.contains('active')){
-      const nextBtn=Array.from(document.querySelectorAll('#adminNav .nb')).find(b=>b!==btn&&b.style.display!=='none');
-      if(nextBtn)nextBtn.click();
-    }
-  });
+  // 勤怠・体調・ODOは全員必須化のため打刻エリア・今日タブは常に表示。
+  const sa=document.getElementById('aStampArea');if(sa)sa.style.display='';
 }
 function applyAdminNavVisibility(){
   const feat=getAdminFeatures();
@@ -4242,11 +4341,12 @@ function openAdminCheckinModal(){
 }
 function closeAdminCheckinModal(){document.getElementById('aciModal').classList.remove('open');}
 async function confirmAdminCheckin(){
+  const ov=document.getElementById('aci-odo').value;
+  if(!ov||isNaN(parseFloat(ov))){const h=document.getElementById('aci-odo-h');if(h)h.innerHTML='<span style="color:var(--rd)">⚠ オドメーター値を入力してください</span>';return;}
   const ftFlag=document.getElementById('aci-fulltime')?.checked||false;
   closeAdminCheckinModal();
-  const ov=document.getElementById('aci-odo').value;
-  if(ov){document.getElementById('aOdoNow').value=ov;aCalcOdo();}
-  // アルコール視認チェック（写真+測定値送信）を経て打刻
+  document.getElementById('aOdoNow').value=ov;
+  // アルコール視認チェック（写真+体調+測定値送信）を経て打刻
   openAlcModal('adm','ci',()=>adminStamp('checkin',ftFlag),ftFlag);
 }
 
@@ -4364,6 +4464,147 @@ function adminAutoSave(td){
   if(document.getElementById('aTodayMemo'))document.getElementById('aTodayMemo').value='';
   if(document.getElementById('aOdoNow'))document.getElementById('aOdoNow').value='';
   updateOdoHintA();
+}
+
+// ═══════════════════════════════════
+// EXECUTIVE STAMP（役員 自身の打刻 — 全員打刻必須化）
+// ═══════════════════════════════════
+function setStE(txt,col){const e=document.getElementById('eWkSt');if(e){e.textContent=txt;e.style.color=col;}}
+function renderWorkHoursE(ci,co){
+  const id=session?.id,w=co-ci,td=todayMap[id]||{};
+  let ot;
+  if(td.fullTimeFlag){ot=Math.max(0,toMins(empStart(id))-ci)+Math.max(0,co-toMins(empEnd(id)));}
+  else{ot=Math.max(0,co-toMins(empEnd(id)));}
+  const wh=document.getElementById('eWkH'),oh=document.getElementById('eOtH');
+  if(wh)wh.textContent=toHHMM(w);if(oh)oh.textContent=toHHMM(ot);
+}
+function execRefreshStampUI(){
+  if(!session)return;
+  let td=todayMap[session.id]||{};
+  if(td.checkinDate&&td.checkinDate!==todayKey()){todayMap[session.id]={};S.set('ka_today',todayMap);td={};}
+  const ciB=document.getElementById('eCiBtn'),coB=document.getElementById('eCoBtn');
+  const ciT=document.getElementById('eCiTime'),coT=document.getElementById('eCoTime');
+  if(td.checkinTime){
+    if(ciT)ciT.textContent=td.checkinTime;if(ciB)ciB.disabled=true;
+    if(td.checkoutTime){if(coT)coT.textContent=td.checkoutTime;if(coB)coB.disabled=true;setStE('退勤済','var(--ac2)');renderWorkHoursE(toMins(td.checkinTime),toMins(td.checkoutTime));}
+    else{if(coB)coB.disabled=false;setStE('勤務中','var(--gn)');}
+  }else{
+    if(ciB)ciB.disabled=false;if(coB)coB.disabled=true;
+    if(ciT)ciT.textContent='--:--';if(coT)coT.textContent='--:--';
+    setStE('未出勤','var(--dim)');
+  }
+}
+function execCheckinFlow(){openExecCheckinModal();}
+function openExecCheckinModal(){
+  const n=new Date();
+  document.getElementById('eciModalTime').textContent=[n.getHours(),n.getMinutes()].map(x=>String(x).padStart(2,'0')).join(':');
+  const oi=document.getElementById('eci-odo');if(oi)oi.value='';
+  eciOdoHint();
+  const acc=curAcc();
+  const ftWrap=document.getElementById('eci-ft-wrap'),ftCb=document.getElementById('eci-fulltime'),ftHint=document.getElementById('eci-ft-hint');
+  if(ftWrap&&acc&&acc.workStart&&acc.workEnd&&(acc.workStart!==settings.start||acc.workEnd!==settings.end)){
+    ftWrap.style.display='';if(ftCb)ftCb.checked=false;
+    if(ftHint)ftHint.textContent=`通常: ${acc.workStart}〜${acc.workEnd} → 常勤: ${settings.start}〜${settings.end}`;
+  }else if(ftWrap){ftWrap.style.display='none';}
+  document.getElementById('eciModal').classList.add('open');
+}
+function closeExecCheckinModal(){document.getElementById('eciModal').classList.remove('open');}
+async function confirmExecCheckin(){
+  const ov=document.getElementById('eci-odo').value;
+  if(!ov||isNaN(parseFloat(ov))){const h=document.getElementById('eci-odo-h');if(h)h.innerHTML='<span style="color:var(--rd)">⚠ オドメーター値を入力してください</span>';return;}
+  const ftFlag=document.getElementById('eci-fulltime')?.checked||false;
+  closeExecCheckinModal();
+  document.getElementById('eOdoNow').value=ov;
+  openAlcModal('exec','ci',()=>execStamp('checkin',ftFlag),ftFlag);
+}
+function execCheckoutFlow(){
+  const td=todayMap[session?.id];
+  if(!td||!td.checkinTime){showToast('⚠ 先に出勤打刻してください');return;}
+  openAlcModal('exec','co',()=>execStamp('checkout'),td.fullTimeFlag||false);
+}
+async function execStamp(type,fullTimeFlag){
+  if(_actionGuard.has('execStamp'))return;_actionGuard.add('execStamp');
+  try{
+    const dk0=todayKey();
+    if(isMonthLocked(dk0.slice(0,7),session?.id)){showToast('🔒 この月はロックされています');return;}
+    const n=new Date();
+    const _dchkT=consumeDchk(type);
+    const time=_dchkT||[n.getHours(),n.getMinutes()].map(x=>String(x).padStart(2,'0')).join(':');
+    if(!todayMap[session.id])todayMap[session.id]={};
+    const td=todayMap[session.id];
+    const loc=await getLocForStamp();
+    if(type==='checkin'){
+      td.checkinTime=time;td.checkinLoc=loc;td.checkinDate=todayKey();
+      if(fullTimeFlag)td.fullTimeFlag=true;else delete td.fullTimeFlag;
+      const ciT=document.getElementById('eCiTime');if(ciT)ciT.textContent=time;
+      const ciB=document.getElementById('eCiBtn');if(ciB)ciB.disabled=true;
+      const coB=document.getElementById('eCoBtn');if(coB)coB.disabled=false;
+      setStE('勤務中','var(--gn)');
+      // 出勤時点の体調・アルコール・走行距離を先行保存
+      const h0=document.getElementById('eHealthSt')?.value||'良好';
+      const a0=document.getElementById('eAlcVal')?.value||'0.00';
+      if(!records[session.id])records[session.id]=[];
+      let r0=records[session.id].find(r=>r.date===dk0);
+      if(!r0){r0={date:dk0};records[session.id].unshift(r0);}
+      r0.health=h0;r0.alcohol=a0;r0.checkin=td.checkinTime;r0.checkinLoc=loc;
+      const oStr=document.getElementById('eOdoNow')?.value;
+      const oNum=oStr?parseFloat(oStr):null;
+      if(oNum!=null){r0.odometer=oNum;r0.todayKm=null;records[session.id].sort((a,b)=>b.date.localeCompare(a.date));recalcOdoKm(session.id,dk0);}
+      S.set('ka_records',records);S.set('ka_today',todayMap);
+      showToast(_dchkT?`✅ 出勤を打刻しました（直行直帰: ${_dchkT}）`:'✅ 出勤を打刻しました');
+    }else{
+      if(!td.checkinTime){showToast('⚠ 先に出勤打刻してください');return;}
+      td.checkoutTime=time;td.checkoutLoc=loc;
+      const coT=document.getElementById('eCoTime');if(coT)coT.textContent=time;
+      const coB=document.getElementById('eCoBtn');if(coB)coB.disabled=true;
+      setStE('退勤済','var(--ac2)');renderWorkHoursE(toMins(td.checkinTime),toMins(time));
+      S.set('ka_today',todayMap);
+      execAutoSave(td);
+      showToast(_dchkT?`✅ 退勤・記録を自動保存しました（直行直帰: ${_dchkT}）`:'✅ 退勤・記録を自動保存しました');
+    }
+  }finally{setTimeout(()=>_actionGuard.delete('execStamp'),1000);}
+}
+function execAutoSave(td){
+  const empId=session.id,dk=td.checkinDate||todayKey();
+  const odoStr=document.getElementById('eOdoNow')?.value;
+  const odoNum=odoStr?parseFloat(odoStr):null;
+  const hEl=document.getElementById('eHealthSt'),aEl=document.getElementById('eAlcVal'),aoEl=document.getElementById('eAlcValOut'),mEl=document.getElementById('eTodayMemo');
+  const rec={date:dk,checkin:td.checkinTime,checkout:td.checkoutTime,checkinLoc:td.checkinLoc,checkoutLoc:td.checkoutLoc,
+    health:hEl?.value||'良好',alcohol:aEl?.value||'0.00',alcoholOut:aoEl?.value||'',memo:mEl?.value||'',odometer:odoNum,todayKm:null,autoCheckout:false,fullTimeFlag:td.fullTimeFlag||false};
+  let _coM=toMins(rec.checkout),_ciM=toMins(rec.checkin);
+  if(_coM<_ciM)_coM+=1440;
+  rec.workMinutes=_coM-_ciM;
+  if(rec.fullTimeFlag){rec.overtimeMinutes=Math.max(0,toMins(empStart(empId))-_ciM)+Math.max(0,_coM-toMins(empEnd(empId)));}
+  else{rec.overtimeMinutes=Math.max(0,_coM-toMins(empEnd(empId)));}
+  if(!records[empId])records[empId]=[];
+  const idx=records[empId].findIndex(r=>r.date===dk);
+  if(idx>=0){
+    const ex=records[empId][idx];
+    // ★ MERGE方式: 打刻データのみ更新、手動修正済みフィールドを保護
+    ex.checkin=rec.checkin;ex.checkout=rec.checkout;
+    ex.workMinutes=rec.workMinutes;ex.overtimeMinutes=rec.overtimeMinutes;
+    ex.autoCheckout=rec.autoCheckout;ex.fullTimeFlag=rec.fullTimeFlag;
+    if(rec.checkoutLoc)ex.checkoutLoc=rec.checkoutLoc;
+    if(rec.checkinLoc)ex.checkinLoc=rec.checkinLoc;
+    if(hEl&&hEl.value)ex.health=rec.health;
+    if(aEl&&aEl.value)ex.alcohol=rec.alcohol;
+    if(aoEl&&aoEl.value)ex.alcoholOut=rec.alcoholOut;
+    if(mEl&&mEl.value)ex.memo=rec.memo;
+    if(odoNum!=null){ex.odometer=odoNum;ex.todayKm=null;}
+  }else{records[empId].unshift(rec);}
+  records[empId].sort((a,b)=>b.date.localeCompare(a.date));
+  const fRec=records[empId].find(r=>r.date===dk);
+  if(fRec?.odometer!=null)recalcOdoKm(empId,dk);
+  S.set('ka_records',records);
+  todayMap[empId]={};S.set('ka_today',todayMap);
+  const ciT=document.getElementById('eCiTime');if(ciT)ciT.textContent='未打刻';
+  const coT=document.getElementById('eCoTime');if(coT)coT.textContent='未打刻';
+  const ciB=document.getElementById('eCiBtn');if(ciB)ciB.disabled=false;
+  const coB=document.getElementById('eCoBtn');if(coB)coB.disabled=false;
+  setStE('待機中','var(--dim)');
+  const wh=document.getElementById('eWkH');if(wh)wh.textContent='--:--';
+  const oh=document.getElementById('eOtH');if(oh)oh.textContent='--:--';
+  ['eAlcVal','eAlcValOut','eTodayMemo','eOdoNow'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
 
 // ── 管理者 ODO ──

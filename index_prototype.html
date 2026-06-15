@@ -409,7 +409,7 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
   <div class="auth-card">
     <div class="auth-logo">📋</div>
     <div class="auth-title">勤怠・訪問管理</div>
-    <div style="font-size:10px;color:var(--dim);text-align:center;margin-top:2px">v2026.05.13a</div>
+    <div style="font-size:10px;color:var(--dim);text-align:center;margin-top:2px">v2026.06.15-alc2 (酒気確認バグ修正版)</div>
     <div class="auth-sub">メールアドレス（管理者/役員）またはユーザー名（スタッフ）とパスワードでログイン</div>
     <div class="fr"><label class="fl">メールアドレス / ユーザー名</label><input class="fi" id="li-user" autocomplete="username" placeholder="例: admin@gmail.com またはユーザー名"></div>
     <div class="fr"><label class="fl">パスワード</label><input class="fi" type="password" id="li-pass" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
@@ -1004,18 +1004,19 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
   <div class="modal">
     <div class="modal-title">⚠ 異常あり - 指示を選択</div>
     <div id="alcng-info" style="font-size:12px;color:var(--dim);margin-bottom:10px"></div>
+    <div style="font-size:11px;color:var(--yw);margin-bottom:8px">※ いずれを選んでも当日の打刻は差し戻されます（本人はボタンを押し直して再測定→再打刻）</div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px">
         <input type="radio" name="alcng-type" value="recheck" checked style="width:18px;height:18px;accent-color:var(--yw)">
-        <span>🔄 再測定を指示<span style="font-size:11px;color:var(--dim)">（当日分の打刻を差し戻し、再チェック後にもう一度打刻させる）</span></span>
+        <span>🔄 再測定を指示<span style="font-size:11px;color:var(--dim)">（打刻を差し戻し、再チェック後にもう一度打刻させる）</span></span>
       </label>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px">
         <input type="radio" name="alcng-type" value="noDrive" style="width:18px;height:18px;accent-color:var(--rd)">
-        <span>🚫 本日の運転禁止<span style="font-size:11px;color:var(--dim)">（打刻はそのまま・運転をさせない）</span></span>
+        <span>🚫 本日の運転禁止（酒気帯び）<span style="font-size:11px;color:var(--dim)">（打刻を差し戻し、本日は運転・勤務させない）</span></span>
       </label>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px">
         <input type="radio" name="alcng-type" value="other" style="width:18px;height:18px;accent-color:var(--ac)">
-        <span>✏ その他の指示</span>
+        <span>✏ その他の指示<span style="font-size:11px;color:var(--dim)">（打刻を差し戻す）</span></span>
       </label>
     </div>
     <div class="fr"><label class="fl">指示事項・補足（任意）</label><input type="text" class="fi" id="alcng-note" placeholder="例: 30分後に再測定して報告"></div>
@@ -1278,6 +1279,16 @@ const DB={
         // 最近フラッシュしたキーは10秒間保護（Supabase反映遅延対策）
         const flushedAt=this._recentlyFlushed.get(r.key);
         if(flushedAt&&(now-flushedAt)<10000)return;
+        // ★酒気確認記録は配列を丸ごと上書きせず、id単位でMERGE（確認済みが古い端末の値で巻き戻らないように）
+        if(r.key==='ka_alc_checks'){
+          try{
+            const remoteArr=Array.isArray(r.value)?r.value:[];
+            const localRaw=localStorage.getItem(LSK('ka_alc_checks'));
+            const localArr=localRaw?JSON.parse(localRaw):[];
+            localStorage.setItem(LSK('ka_alc_checks'),JSON.stringify(alcMergeArrays(localArr,remoteArr)));
+          }catch(e){localStorage.setItem(LSK('ka_alc_checks'),JSON.stringify(r.value));}
+          return;
+        }
         localStorage.setItem(LSK(r.key),JSON.stringify(r.value));
       });
       // 古い保護記録をクリア
@@ -3320,7 +3331,53 @@ function renderWorkHoursA(ci,co){
 // ═══════════════════════════════════
 const ALC_BUCKET='alc-photos';
 function alcFeatureOn(){const f=getAdminFeatures();return f.kintai!==false&&f.health!==false;}
-function saveAlcChecks(){S.set('ka_alc_checks',alcChecks);}
+// 酒気確認記録の保存。
+// ★この配列はSupabaseで1キー(ka_alc_checks)同期のため、単純なlast-write-winsだと
+//   「別端末で確認済み(ok/ng)にした記録を、古い配列を持つ端末のpushが pending に復活させる」
+//   事故が起きる（=出勤チェック写真が復活して再承認が必要になるバグ）。
+// → 各記録に updatedAt を持たせ、保存のたびにリモートを id 単位で MERGE してから push する。
+//   新しい updatedAt を優先するため、確認済み記録が古い端末の書き込みで巻き戻らない。
+function _alcWriteLocal(){try{localStorage.setItem(LSK('ka_alc_checks'),JSON.stringify(alcChecks));}catch(e){console.warn('alc local save failed',e);}}
+function alcMergeArrays(a,b){
+  const byId=new Map();
+  const put=c=>{
+    if(!c||!c.id)return;
+    const ex=byId.get(c.id);
+    if(!ex){byId.set(c.id,c);return;}
+    const ta=ex.updatedAt||0, tb=c.updatedAt||0;
+    if(tb>ta){byId.set(c.id,c);}                                  // 新しい更新が勝つ
+    else if(tb===ta&&c.confirmedAt&&!ex.confirmedAt){byId.set(c.id,c);} // 同時刻なら確認済みを優先
+  };
+  (a||[]).forEach(put);(b||[]).forEach(put);
+  return[...byId.values()];
+}
+async function alcFetchRemote(){
+  if(!DB.configured())return null;
+  try{
+    const res=await fetch(DB._url+'/rest/v1/'+KV_TABLE+'?select=value&key=eq.ka_alc_checks',{headers:DB._hdr()});
+    if(!res.ok)return null;
+    const rows=await res.json();
+    if(Array.isArray(rows)&&rows[0]&&Array.isArray(rows[0].value))return rows[0].value;
+  }catch(e){console.warn('alc remote fetch failed',e);}
+  return null;
+}
+let _alcSyncQueue=Promise.resolve();
+function saveAlcChecks(){
+  _alcWriteLocal(); // まずローカルへ即時反映（UIの一貫性確保）
+  if(!DB.configured())return _alcSyncQueue;
+  _alcSyncQueue=_alcSyncQueue.then(async()=>{
+    const remote=await alcFetchRemote();
+    if(remote){
+      alcChecks=alcMergeArrays(alcChecks,remote); // 自分の変更とリモートをid単位で統合
+      _alcWriteLocal();
+    }
+    DB._push('ka_alc_checks',alcChecks); // MERGE済み配列を同期（他端末の確認結果を保持）
+    if(typeof renderAlcQueue==='function')renderAlcQueue();
+    if(typeof updateAlcBadge==='function')updateAlcBadge();
+    if(typeof renderAlcStatusSelf==='function')renderAlcStatusSelf();
+  }).catch(e=>console.warn('alc sync failed',e));
+  return _alcSyncQueue;
+}
 function pruneAlcChecks(){
   const cut=new Date();cut.setMonth(cut.getMonth()-13);
   const ck=[cut.getFullYear(),String(cut.getMonth()+1).padStart(2,'0'),String(cut.getDate()).padStart(2,'0')].join('-');
@@ -3457,7 +3514,7 @@ async function alcSubmit(skip){
     const acc=curAcc();
     alcChecks.push({id:uid('alc'),empId:session.id,empName:acc?.name||'',storeId:acc?.storeId||null,
       date:todayKey(),type:ctx.type,time:alcNowTime(),val:v,photo:photoPath,status,
-      confirmedBy:null,confirmedAt:null,method:null,note:null});
+      confirmedBy:null,confirmedAt:null,method:null,note:null,rolledBack:false,updatedAt:Date.now()});
     saveAlcChecks();
     // 直行直帰: チェックONなら打刻時刻を所定時刻に上書き（酒気確認の記録は実時刻のまま）
     const dc=document.getElementById('alc-m-dchk');
@@ -3492,7 +3549,7 @@ function alcStatusLabel(c){
   if(c.status==='pending')return'<span style="color:var(--yw)">⏳ 管理者確認待ち</span>';
   if(c.status==='nophoto')return'<span style="color:var(--yw)">📵 写真なし・電話確認待ち</span>';
   if(c.status==='ok')return`<span style="color:var(--gn)">✅ 確認済み（${c.confirmedBy}）</span>`;
-  if(c.status==='ng')return`<span style="color:var(--rd)">🚫 異常あり${c.note?'：'+c.note:''}</span>${/再測定/.test(c.note||'')?'<br><span style="color:var(--yw);font-size:11px">⚠ 打刻が差し戻されています。画面を再読み込みして、再測定→もう一度打刻してください</span>':''}`;
+  if(c.status==='ng')return`<span style="color:var(--rd)">🚫 異常あり${c.note?'：'+c.note:''}</span>${c.rolledBack?'<br><span style="color:var(--yw);font-size:11px">⚠ 打刻が差し戻されました。画面を再読み込みして、もう一度打刻してください</span>':''}`;
   return'';
 }
 function renderAlcStatusSelf(){
@@ -3553,6 +3610,7 @@ function confirmAlcCheck(id){
   c.confirmedBy=curAcc()?.name||'';
   c.confirmedAt=alcNowStamp();
   c.method=c.photo?'カメラ画像確認':'電話等による対話確認';
+  c.updatedAt=Date.now();
   const ph=c.photo;c.photo=null;
   saveAlcChecks();
   if(ph)alcDeletePhoto(ph); // 確認完了 → 写真は即削除（容量対策・確認記録は保持）
@@ -3584,14 +3642,17 @@ function submitAlcNg(){
   c.confirmedAt=alcNowStamp();
   c.method=c.photo?'カメラ画像確認':'電話等による対話確認';
   c.note=note;
+  c.updatedAt=Date.now();
   const ph=c.photo;c.photo=null;
-  let rolled=false;
-  if(type==='recheck')rolled=alcRollbackStamp(c);
+  // ★異常あり判定は全て当日打刻を差し戻す（再測定指示・本日運転禁止・その他いずれも）。
+  //   差し戻し後、本人は出勤/退勤ボタンを押し直して再測定→再打刻できる。
+  const rolled=alcRollbackStamp(c);
+  c.rolledBack=!!rolled;
   saveAlcChecks();
   if(ph)alcDeletePhoto(ph);
   closeAlcNg();
   renderAlcQueue();updateAlcBadge();renderAlcStatusSelf();
-  showToast(rolled?'🔄 異常あり・打刻を差し戻しました（再測定指示）':'⚠ 異常ありとして記録しました');
+  showToast(rolled?'🔄 異常あり・打刻を差し戻しました（本人はボタンを押し直して再測定してください）':'⚠ 異常ありとして記録しました（打刻は差し戻せませんでした）');
 }
 // ── 再測定指示: 当日打刻の差し戻し ──
 function alcRollbackStamp(c){
@@ -3619,7 +3680,8 @@ function reopenAlcCheck(id){
   const c=alcChecks.find(x=>x.id===id);if(!c)return;
   if(!confirm(`${c.empName}（${c.type==='ci'?'出勤':'退勤'} ${c.date} ${c.time}）の判定「${c.status==='ok'?'酒気帯びなし':'異常あり'}」を取り消して未確認に戻しますか？\n※写真は削除済みのため、電話等での再確認になります`))return;
   c.status='nophoto';
-  c.confirmedBy=null;c.confirmedAt=null;c.method=null;c.note=null;
+  c.confirmedBy=null;c.confirmedAt=null;c.method=null;c.note=null;c.rolledBack=false;
+  c.updatedAt=Date.now();
   saveAlcChecks();
   renderAlcQueue();updateAlcBadge();renderAlcStatusSelf();
   showToast('↩ 未確認に戻しました。確認キューから再判定してください');

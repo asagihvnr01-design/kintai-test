@@ -409,7 +409,7 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
   <div class="auth-card">
     <div class="auth-logo">📋</div>
     <div class="auth-title">勤怠・訪問管理</div>
-    <div style="font-size:10px;color:var(--dim);text-align:center;margin-top:2px">v2026.06.15-alc4 (運転管理者・酒気確認権限版)</div>
+    <div style="font-size:10px;color:var(--dim);text-align:center;margin-top:2px">v2026.06.15-alc5 (4日自動承認・退勤忘れ・訪問確認・同期消失対策版)</div>
     <div class="auth-sub">メールアドレス（管理者/役員）またはユーザー名（スタッフ）とパスワードでログイン</div>
     <div class="fr"><label class="fl">メールアドレス / ユーザー名</label><input class="fi" id="li-user" autocomplete="username" placeholder="例: admin@gmail.com またはユーザー名"></div>
     <div class="fr"><label class="fl">パスワード</label><input class="fi" type="password" id="li-pass" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
@@ -1030,6 +1030,35 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
   </div>
 </div>
 
+<!-- 退勤後: 訪問実績の確認モーダル -->
+<div class="modal-ov" id="visitConfirmModal">
+  <div class="modal" style="max-height:88vh;overflow-y:auto">
+    <div class="modal-title">📋 入力忘れはないですか？</div>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:10px">以下の本日の訪問実績で問題ないですか？その場で修正もできます。確定すると本日の訪問実績として保存されます。</p>
+    <div class="vbox">
+      <div class="vsec">① 営業</div>
+      <div class="vrow"><div><div class="vr-l">営業件数</div></div><div class="vi-wrap"><input type="number" class="vi" id="vc-sales" min="0" step="1" value=""><span class="vu">件</span></div></div>
+      <div class="vsec">② 介護保険</div>
+      <div class="vrow"><div><div class="vr-l" id="vc-care-lbl">②-1 30分</div></div><div class="vi-wrap"><input type="number" class="vi" id="vc-c30" min="0" step="1" value=""><span class="vu">回</span></div></div>
+      <div class="vrow"><div><div class="vr-l">②-2 60分</div></div><div class="vi-wrap"><input type="number" class="vi" id="vc-c60" min="0" step="1" value=""><span class="vu">回</span></div></div>
+      <div class="vrow"><div><div class="vr-l">②-3 90分</div></div><div class="vi-wrap"><input type="number" class="vi" id="vc-c90" min="0" step="1" value=""><span class="vu">回</span></div></div>
+      <div class="vsec">③ 医療保険</div>
+      <div class="vrow"><div><div class="vr-l">医療保険</div><div class="vr-s">1回 = 1時間</div></div><div class="vi-wrap"><input type="number" class="vi" id="vc-med" min="0" step="1" value=""><span class="vu">回</span></div></div>
+      <div class="vsec">④〜⑦ 会議・契約・研修</div>
+      <div class="vrow"><div><div class="vr-l">④ 担当者会議</div><div class="vr-s">1回 = 0.5時間</div></div><div class="vi-wrap"><input type="number" class="vi" id="vc-stf" min="0" step="1" value=""><span class="vu">回</span></div></div>
+      <div class="vrow"><div><div class="vr-l">⑤ 退院前カンファ</div><div class="vr-s">1回 = 0.5時間</div></div><div class="vi-wrap"><input type="number" class="vi" id="vc-pre" min="0" step="1" value=""><span class="vu">回</span></div></div>
+      <div class="vrow"><div><div class="vr-l">⑥ 契約</div><div class="vr-s">1回 = 1時間</div></div><div class="vi-wrap"><input type="number" class="vi" id="vc-con" min="0" step="1" value=""><span class="vu">回</span></div></div>
+      <div class="vrow"><div><div class="vr-l">⑦ 外部研修</div><div class="vr-s">1回 = 1時間</div></div><div class="vi-wrap"><input type="number" class="vi" id="vc-trn" min="0" step="1" value=""><span class="vu">回</span></div></div>
+      <div class="vsec">⏰ 時間外訪問</div>
+      <div class="vrow"><div><div class="vr-l">時間外訪問</div><div class="vr-s">1回 = ¥4,000（0.5回単位で入力可）</div></div><div class="vi-wrap"><input type="number" class="vi" id="vc-ov" min="0" step="0.5" value=""><span class="vu">回</span></div></div>
+      <div class="vsec" id="vc-oncall-row">📞 オンコール</div>
+      <div class="vrow" id="vc-oncall-input-row"><div><div class="vr-l">オンコール</div><div class="vr-s">待機回数</div></div><div class="vi-wrap"><input type="number" class="vi" id="vc-oncall" min="0" step="1" value=""><span class="vu">回</span></div></div>
+    </div>
+    <button class="sbv" onclick="submitVisitConfirm()" style="background:var(--gn);width:100%;font-size:16px;font-weight:700;padding:14px;margin-top:8px">✅ 本日の訪問内容を確定して送信</button>
+    <button class="sbv" onclick="closeVisitConfirmModal()" style="background:var(--sf2);border:1px solid var(--bd);color:var(--dim);width:100%;margin-top:8px">あとで入力する（スキップ）</button>
+  </div>
+</div>
+
 <!-- Alcohol Visual Check Modal -->
 <div class="modal-ov" id="alcModal">
   <div class="modal">
@@ -1356,6 +1385,15 @@ const DB={
             const localArr=localRaw?JSON.parse(localRaw):[];
             localStorage.setItem(LSK('ka_alc_checks'),JSON.stringify(alcMergeArrays(localArr,remoteArr)));
           }catch(e){localStorage.setItem(LSK('ka_alc_checks'),JSON.stringify(r.value));}
+          return;
+        }
+        // ★記録・訪問・todayMap・アカウント等のコレクションはunion-merge（ローカル固有エントリを消さない）
+        if(['ka_records','ka_visits','ka_leave_grants','ka_today','ka_accounts','ka_stores','ka_leave_requests'].indexOf(r.key)>=0){
+          try{
+            const localRaw=localStorage.getItem(LSK(r.key));
+            const localVal=localRaw?JSON.parse(localRaw):null;
+            localStorage.setItem(LSK(r.key),JSON.stringify(kvMergeForPull(r.key,localVal,r.value)));
+          }catch(e){localStorage.setItem(LSK(r.key),JSON.stringify(r.value));}
           return;
         }
         localStorage.setItem(LSK(r.key),JSON.stringify(r.value));
@@ -1765,9 +1803,10 @@ function checkPendingAutoCheckout(){
         const origSession=session;
         session={id:e.id};
         try{autoSaveRecordA(td,td.checkinDate);}finally{session=origSession;}
+        ensureForgotCheckoutAlc(e,td.checkinDate,autoTime); // 退勤忘れ→退勤側酒気確認を電話確認待ちで作成
         // 自分自身のUI更新
         if(e.id===origSession?.id){_updateAutoCheckoutUI(curRole,td.checkinTime,autoTime);}
-        showToast(`⏰ ${e.name}の${td.checkinDate}退勤を自動打刻しました（${autoTime}）`);
+        showToast(`⏰ ${e.name}の${td.checkinDate}退勤打刻を忘れていたため、就業時刻（${autoTime}）で自動退勤しました（退勤忘れ／要電話確認）`);
         return; // 処理済み
       }
     }
@@ -1787,8 +1826,9 @@ function checkPendingAutoCheckout(){
       }
       S.set('ka_records',records);
       todayMap[e.id]={};
+      ensureForgotCheckoutAlc(e,pending.date,autoTime); // 退勤忘れ→退勤側酒気確認を電話確認待ちで作成
       if(e.id===session?.id){_updateAutoCheckoutUI(curRole,pending.checkin,autoTime);}
-      showToast(`⏰ ${e.name}の${pending.date}退勤を自動打刻しました（${autoTime}）[復旧]`);
+      showToast(`⏰ ${e.name}の${pending.date}退勤打刻を忘れていたため、就業時刻（${autoTime}）で自動退勤しました（退勤忘れ／要電話確認）`);
     }
   });
   S.set('ka_today',todayMap);
@@ -1993,6 +2033,37 @@ function _saveVisitsInner(){
   if(idx>=0)visits[empId][idx]=rec;else visits[empId].unshift(rec);
   S.set('ka_visits',visits);renderVSummary();showToast('✅ 訪問実績を保存しました');
 }
+// ── 退勤後: 訪問実績の確認モーダル ──
+function openVisitConfirmModal(){
+  if(!session)return;
+  if(getAdminFeatures().visits===false)return; // 訪問実績が非表示の人には出さない
+  const dk=todayKey();
+  const v=(visits[session.id]||[]).find(r=>r.date===dk)||{};
+  const set=(id,val)=>{const e=document.getElementById(id);if(e)e.value=(val&&val!==0)?val:'';};
+  set('vc-sales',v.sales);set('vc-c30',v.c30);set('vc-c60',v.c60);set('vc-c90',v.c90);
+  set('vc-med',v.medical);set('vc-stf',v.staff);set('vc-pre',v.pre);set('vc-con',v.contract);
+  set('vc-trn',v.training);set('vc-ov',v.overtime);set('vc-oncall',v.oncall);
+  const lbl=document.getElementById('vc-care-lbl');if(lbl)lbl.textContent=`②-1 ${getShortMin()}分`;
+  const ocHide=(curAcc()?.oncallVisible===false);
+  ['vc-oncall-row','vc-oncall-input-row'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display=ocHide?'none':'';});
+  document.getElementById('visitConfirmModal').classList.add('open');
+}
+function closeVisitConfirmModal(){document.getElementById('visitConfirmModal').classList.remove('open');}
+function submitVisitConfirm(){
+  if(!session)return;
+  const dk=todayKey();
+  const g=id=>parseFloat(document.getElementById(id)?.value)||0;
+  const rec={date:dk,sales:g('vc-sales'),c30:g('vc-c30'),c60:g('vc-c60'),c90:g('vc-c90'),medical:g('vc-med'),staff:g('vc-stf'),pre:g('vc-pre'),contract:g('vc-con'),training:g('vc-trn'),overtime:g('vc-ov'),oncall:g('vc-oncall')};
+  if(!visits[session.id])visits[session.id]=[];
+  const idx=visits[session.id].findIndex(v=>v.date===dk);
+  if(idx>=0)visits[session.id][idx]=rec;else visits[session.id].unshift(rec);
+  S.set('ka_visits',visits);
+  closeVisitConfirmModal();
+  if(typeof loadVisit==='function')loadVisit(dk);
+  if(typeof renderVSummary==='function')renderVSummary();
+  if(typeof renderVSummaryA==='function')renderVSummaryA();
+  showToast('✅ 本日の訪問実績を確定・送信しました');
+}
 function loadVisit(dk){
   if(!session)return;
   const v=(visits[session.id]||[]).find(r=>r.date===dk);
@@ -2061,7 +2132,7 @@ function exportCSV(month,targetStoreId){
         rec?.health||'', rec?.alcohol||'', rec?.alcoholOut||'',
         alcCsv(emp.id,dk,'ci'), alcCsv(emp.id,dk,'co'), alcCsvNote(emp.id,dk),
         rec?.memo||'',
-        rec?.autoCheckout?'○':'',
+        rec?.autoCheckout?'退勤忘れ(自動退勤)':'',
         vis?.sales||'', col30, col40, vis?.c60||'', vis?.c90||'',
         vis?.medical||'', vis?.staff||'', vis?.pre||'', vis?.contract||'',
         vis?.training||'', empProf!=='リハビリ'?(vis?.overtime||''):'', empProf!=='リハビリ'?(vis?.oncall||''):'',
@@ -2702,7 +2773,7 @@ function renderRecords(){
     const missOdo=sOdo&&r.checkin&&r.odometer==null&&!isOdoOnly;
     return`<div class="ri"${isHolidayVehicle?' style="border-left:3px solid var(--ac);opacity:.85"':''}${(missCO||missCI)?' style="border-left:3px solid var(--rd);background:rgba(247,95,95,.06)"':''}>
       <div style="flex:1">
-        <div class="rl">${r.date}${r.date.startsWith(thisMonth())?'<span class="bdg bdg-b">今月</span>':''}${isHolidayVehicle?'<span class="bdg" style="background:rgba(79,142,247,.12);color:var(--ac)">🚗 車両のみ</span>':''}${missCO?'<span class="bdg" style="background:rgba(247,95,95,.15);color:var(--rd)">⚠ 退勤未打刻</span>':''}${missCI?'<span class="bdg" style="background:rgba(247,95,95,.15);color:var(--rd)">⚠ 出勤未打刻</span>':''}${missOdo?'<span class="bdg" style="background:rgba(247,211,79,.15);color:var(--yw)">⚠ ODO未入力</span>':''}${r.fullTimeFlag?'<span class="bdg" style="background:rgba(100,181,246,.15);color:#64b5f6">常勤</span>':''}${r.autoCheckout?'<span class="bdg" style="background:rgba(247,211,79,.15);color:var(--yw)">自動</span>':''}</div>
+        <div class="rl">${r.date}${r.date.startsWith(thisMonth())?'<span class="bdg bdg-b">今月</span>':''}${isHolidayVehicle?'<span class="bdg" style="background:rgba(79,142,247,.12);color:var(--ac)">🚗 車両のみ</span>':''}${missCO?'<span class="bdg" style="background:rgba(247,95,95,.15);color:var(--rd)">⚠ 退勤未打刻</span>':''}${missCI?'<span class="bdg" style="background:rgba(247,95,95,.15);color:var(--rd)">⚠ 出勤未打刻</span>':''}${missOdo?'<span class="bdg" style="background:rgba(247,211,79,.15);color:var(--yw)">⚠ ODO未入力</span>':''}${r.fullTimeFlag?'<span class="bdg" style="background:rgba(100,181,246,.15);color:#64b5f6">常勤</span>':''}${autoCoBadge(r)}</div>
         ${isHolidayVehicle
           ?`<div class="rt" style="color:var(--ac)">休日車両利用（ODO: ${r.odometer?.toFixed(1)} km）${r.todayKm!=null?' ／ 走行 '+r.todayKm+'km':''}</div>`
           :isOdoOnly&&!sKintai
@@ -2752,7 +2823,7 @@ function renderEditList(){
     const missOdo=eShowO&&r.checkin&&r.odometer==null&&!isOdoOnly;
     return`
     <div class="ei"${isHolidayVehicle?' style="border-left:3px solid var(--ac)"':''}${(missCO||missCI)?' style="border-left:3px solid var(--rd)"':''}>
-      <div class="ed">📅 ${r.date}${isHolidayVehicle?' <span style="font-size:11px;background:rgba(79,142,247,.12);color:var(--ac);padding:2px 6px;border-radius:4px;font-weight:700">🚗 車両のみ</span>':''}${missCO?' <span style="font-size:11px;background:rgba(247,95,95,.15);color:var(--rd);padding:2px 6px;border-radius:4px;font-weight:700">⚠ 退勤未打刻</span>':''}${missCI?' <span style="font-size:11px;background:rgba(247,95,95,.15);color:var(--rd);padding:2px 6px;border-radius:4px;font-weight:700">⚠ 出勤未打刻</span>':''}${missOdo?' <span style="font-size:11px;background:rgba(247,211,79,.15);color:var(--yw);padding:2px 6px;border-radius:4px;font-weight:700">⚠ ODO未入力</span>':''}</div>
+      <div class="ed">📅 ${r.date}${autoCoBadge(r)}${isHolidayVehicle?' <span style="font-size:11px;background:rgba(79,142,247,.12);color:var(--ac);padding:2px 6px;border-radius:4px;font-weight:700">🚗 車両のみ</span>':''}${missCO?' <span style="font-size:11px;background:rgba(247,95,95,.15);color:var(--rd);padding:2px 6px;border-radius:4px;font-weight:700">⚠ 退勤未打刻</span>':''}${missCI?' <span style="font-size:11px;background:rgba(247,95,95,.15);color:var(--rd);padding:2px 6px;border-radius:4px;font-weight:700">⚠ 出勤未打刻</span>':''}${missOdo?' <span style="font-size:11px;background:rgba(247,211,79,.15);color:var(--yw);padding:2px 6px;border-radius:4px;font-weight:700">⚠ ODO未入力</span>':''}</div>
       <div class="er">
         <div class="ef"><label>出勤時刻</label><input type="time" class="einp" id="e_ci_${i}" value="${r.checkin||''}"${dis}></div>
         <div class="ef"><label>退勤時刻</label><input type="time" class="einp" id="e_co_${i}" value="${r.checkout||''}"${dis}></div>
@@ -3477,6 +3548,29 @@ function alcMergeArrays(a,b){
   (a||[]).forEach(put);(b||[]).forEach(put);
   return[...byId.values()];
 }
+// ── クラウド同期: コレクションのunion-merge ──
+// pullで「ローカルにあってリモートに無いエントリ」を消さない（別端末の古いpushでの記録消失を防ぐ）。
+// 同一キーの衝突はリモート優先（管理者修正の伝播を維持＝従来挙動）、ローカル固有エントリは保持。
+function _kvMergeArr(localArr,remoteArr,keyFn){
+  const out=[];const rk=new Set();
+  (remoteArr||[]).forEach(e=>{out.push(e);try{rk.add(keyFn(e));}catch(_){}});
+  (localArr||[]).forEach(e=>{let k;try{k=keyFn(e);}catch(_){k=undefined;}if(k===undefined||!rk.has(k))out.push(e);});
+  return out;
+}
+function _kvMergeByEmp(local,remote,keyFn){
+  const out={};const ids=new Set([...Object.keys(local||{}),...Object.keys(remote||{})]);
+  ids.forEach(id=>out[id]=_kvMergeArr((local||{})[id]||[],(remote||{})[id]||[],keyFn));
+  return out;
+}
+function kvMergeForPull(key,localVal,remoteVal){
+  try{
+    if(key==='ka_records'||key==='ka_visits')return _kvMergeByEmp(localVal,remoteVal,e=>e.date);
+    if(key==='ka_leave_grants')return _kvMergeByEmp(localVal,remoteVal,e=>e.grantDate||e.id||e.date);
+    if(key==='ka_today')return Object.assign({},localVal||{},remoteVal||{}); // remote優先・local固有empIdは保持
+    if(key==='ka_accounts'||key==='ka_stores'||key==='ka_leave_requests')return _kvMergeArr(localVal,remoteVal,e=>e.id);
+  }catch(e){console.warn('kv merge failed',key,e);}
+  return remoteVal;
+}
 async function alcFetchRemote(){
   if(!DB.configured())return null;
   try{
@@ -3503,6 +3597,31 @@ function saveAlcChecks(){
     if(typeof renderAlcStatusSelf==='function')renderAlcStatusSelf();
   }).catch(e=>console.warn('alc sync failed',e));
   return _alcSyncQueue;
+}
+// 未承認の酒気確認を「確認日から4日経過」で店舗の運転管理者名義で自動承認し写真削除
+function autoApproveStaleAlcChecks(){
+  const today=todayKey();let changed=false;
+  alcChecks.forEach(c=>{
+    if((c.status==='pending'||c.status==='nophoto')&&daysBetween(c.date,today)>=4){
+      const mgrName=storeDriveMgrName(c.empId);
+      c.status='ok';c.confirmedBy=mgrName;c.confirmerRole='運転管理者';
+      c.confirmedAt=alcNowStamp();c.method='4日経過・自動承認（画像/電話未確認）';
+      c.note=(c.note?c.note+'／':'')+'4日経過により自動承認';c.updatedAt=Date.now();
+      if(c.photo){alcDeletePhoto(c.photo);c.photo=null;}
+      changed=true;
+    }
+  });
+  if(changed)saveAlcChecks();
+}
+// 退勤忘れ（自動退勤）時の退勤側酒気確認を「写真なし・電話確認待ち」で作成
+function ensureForgotCheckoutAlc(empAcc,dateKey,autoTime){
+  if(!empAcc)return;
+  if(alcLatest(empAcc.id,dateKey,'co'))return; // 既にあれば作らない
+  alcChecks.push({id:uid('alc'),empId:empAcc.id,empName:empAcc.name||'',storeId:empAcc.storeId||null,
+    date:dateKey,type:'co',time:autoTime,val:'',photo:null,status:'nophoto',
+    confirmedBy:null,confirmerRole:null,confirmedAt:null,method:null,
+    note:'退勤忘れ（自動退勤）・電話確認で実施',forgotCheckout:true,rolledBack:false,updatedAt:Date.now()});
+  saveAlcChecks();
 }
 function pruneAlcChecks(){
   const cut=new Date();cut.setMonth(cut.getMonth()-13);
@@ -3935,6 +4054,7 @@ async function _stampInner(type,fullTimeFlag){
     // 出勤日(checkinDate)を基準に記録を保存（日付跨ぎ対応）
     autoSaveRecordA(td,td.checkinDate||todayKey());
         showToast(_dchkT?`✅ 退勤・記録を自動保存しました（直行直帰: ${_dchkT}）`:'✅ 退勤・記録を自動保存しました');
+    openVisitConfirmModal();
   }
 }
 
@@ -4201,7 +4321,7 @@ function renderRecordsA(){
     if(rShowO&&!isOdoOnly&&r.todayKm!=null)detailParts.push('🚗 '+r.todayKm+'km');
     if(r.memo)detailParts.push('📝'+r.memo);
     return`<div class="ri"${isHolidayVehicle?' style="border-left:3px solid var(--ac);opacity:.85"':''}${(missCO||missCI)?' style="border-left:3px solid var(--rd);background:rgba(247,95,95,.06)"':''}><div style="flex:1">
-      <div class="rl">${r.date}${r.date.startsWith(thisMonth())?'<span class="bdg bdg-b">今月</span>':''}${isHolidayVehicle?'<span class="bdg" style="background:rgba(79,142,247,.12);color:var(--ac)">🚗 車両のみ</span>':''}${missCO?'<span class="bdg" style="background:rgba(247,95,95,.15);color:var(--rd)">⚠ 退勤未打刻</span>':''}${missCI?'<span class="bdg" style="background:rgba(247,95,95,.15);color:var(--rd)">⚠ 出勤未打刻</span>':''}${missOdo?'<span class="bdg" style="background:rgba(247,211,79,.15);color:var(--yw)">⚠ ODO未入力</span>':''}${r.fullTimeFlag?'<span class="bdg" style="background:rgba(100,181,246,.15);color:#64b5f6">常勤</span>':''}${r.autoCheckout?'<span class="bdg" style="background:rgba(247,211,79,.15);color:var(--yw)">自動</span>':''}</div>
+      <div class="rl">${r.date}${r.date.startsWith(thisMonth())?'<span class="bdg bdg-b">今月</span>':''}${isHolidayVehicle?'<span class="bdg" style="background:rgba(79,142,247,.12);color:var(--ac)">🚗 車両のみ</span>':''}${missCO?'<span class="bdg" style="background:rgba(247,95,95,.15);color:var(--rd)">⚠ 退勤未打刻</span>':''}${missCI?'<span class="bdg" style="background:rgba(247,95,95,.15);color:var(--rd)">⚠ 出勤未打刻</span>':''}${missOdo?'<span class="bdg" style="background:rgba(247,211,79,.15);color:var(--yw)">⚠ ODO未入力</span>':''}${r.fullTimeFlag?'<span class="bdg" style="background:rgba(100,181,246,.15);color:#64b5f6">常勤</span>':''}${autoCoBadge(r)}</div>
       ${isHolidayVehicle
         ?`<div class="rt" style="color:var(--ac)">休日車両利用（ODO: ${r.odometer?.toFixed(1)} km）${r.todayKm!=null?' ／ 走行 '+r.todayKm+'km':''}</div>`
         :isOdoOnly&&!rShowK
@@ -4240,7 +4360,7 @@ function renderEditListA(){
     const missCO=showKintai&&r.checkin&&!r.checkout&&!isOdoOnly&&r.date!==todayKey();
     const missCI=showKintai&&!r.checkin&&r.checkout&&!isOdoOnly;
     const missOdo=showOdo&&r.checkin&&r.odometer==null&&!isOdoOnly;
-    return`<div class="ei"${isHolidayVehicle?' style="border-left:3px solid var(--ac)"':''}${(missCO||missCI)?' style="border-left:3px solid var(--rd)"':''}><div class="ed">📅 ${r.date}${isHolidayVehicle?' <span class="bdg" style="background:rgba(79,142,247,.12);color:var(--ac);font-size:10px;margin-left:6px">🚗 車両のみ</span>':''}${missCO?' <span class="bdg" style="background:rgba(247,95,95,.15);color:var(--rd);font-size:10px;margin-left:6px">⚠ 退勤未打刻</span>':''}${missCI?' <span class="bdg" style="background:rgba(247,95,95,.15);color:var(--rd);font-size:10px;margin-left:6px">⚠ 出勤未打刻</span>':''}${missOdo?' <span class="bdg" style="background:rgba(247,211,79,.15);color:var(--yw);font-size:10px;margin-left:6px">⚠ ODO未入力</span>':''}</div>
+    return`<div class="ei"${isHolidayVehicle?' style="border-left:3px solid var(--ac)"':''}${(missCO||missCI)?' style="border-left:3px solid var(--rd)"':''}><div class="ed">📅 ${r.date}${autoCoBadge(r)}${isHolidayVehicle?' <span class="bdg" style="background:rgba(79,142,247,.12);color:var(--ac);font-size:10px;margin-left:6px">🚗 車両のみ</span>':''}${missCO?' <span class="bdg" style="background:rgba(247,95,95,.15);color:var(--rd);font-size:10px;margin-left:6px">⚠ 退勤未打刻</span>':''}${missCI?' <span class="bdg" style="background:rgba(247,95,95,.15);color:var(--rd);font-size:10px;margin-left:6px">⚠ 出勤未打刻</span>':''}${missOdo?' <span class="bdg" style="background:rgba(247,211,79,.15);color:var(--yw);font-size:10px;margin-left:6px">⚠ ODO未入力</span>':''}</div>
       ${showKintai?`<div class="er"><div class="ef"><label>出勤時刻</label><input type="time" class="einp" id="ea_ci_${i}" value="${r.checkin||''}"${dis}></div><div class="ef"><label>退勤時刻</label><input type="time" class="einp" id="ea_co_${i}" value="${r.checkout||''}"${dis}></div></div>`:`<input type="hidden" id="ea_ci_${i}" value="${r.checkin||''}"><input type="hidden" id="ea_co_${i}" value="${r.checkout||''}">`}
       <div class="er">${showOdo?`<div class="ef"><label>ODO(km)</label><input type="number" class="einp" id="ea_od_${i}" value="${r.odometer!=null?r.odometer:''}" step="0.1"${dis}></div>`:`<input type="hidden" id="ea_od_${i}" value="${r.odometer!=null?r.odometer:''}">`}${showHealth?`<div class="ef"><label>体調</label><select class="einp" id="ea_hl_${i}"${dis}>${['良好','普通','不調'].map(v=>`<option${r.health===v?' selected':''}>${v}</option>`).join('')}</select></div>`:`<input type="hidden" id="ea_hl_${i}" value="${r.health||'良好'}">`}</div>
       <div class="er">${showHealth?`<div class="ef"><label>アルコール出勤</label><input type="number" class="einp" id="ea_al_${i}" value="${r.alcohol||'0.00'}" step="0.01"${dis}></div><div class="ef"><label>アルコール退勤</label><input type="number" class="einp" id="ea_ao_${i}" value="${r.alcoholOut||''}" step="0.01"${dis}></div>`:`<input type="hidden" id="ea_al_${i}" value="${r.alcohol||'0.00'}"><input type="hidden" id="ea_ao_${i}" value="${r.alcoholOut||''}">`}</div>
@@ -4337,6 +4457,12 @@ function applyAlcTabVisibility(){
 }
 // 酒気確認キューの対象範囲（自店舗のアカウント。管理者はcurrentStoreId、スタッフ確認者はcurAcc().storeId）
 function alcScopeIds(){const store=currentStoreId||curAcc()?.storeId;return new Set(accounts.filter(a=>store?a.storeId===store:true).map(a=>a.id));}
+// 日付差（'YYYY-MM-DD' d2 - d1 を日数で）
+function daysBetween(d1,d2){const a=new Date(d1+'T00:00:00'),b=new Date(d2+'T00:00:00');return Math.round((b-a)/86400000);}
+// 指定スタッフの店舗の運転管理者名（複数いれば先頭、副でも可、いなければシステム）
+function storeDriveMgrName(empId){const acc=accounts.find(a=>a.id===empId);const store=acc?.storeId;const mgr=accounts.find(a=>a.driveMgr&&(!store||a.storeId===store))||accounts.find(a=>a.subDriveMgr&&(!store||a.storeId===store));return mgr?mgr.name:'システム';}
+// 退勤忘れ（自動退勤）バッジ
+function autoCoBadge(r){return r&&r.autoCheckout?'<span class="bdg" style="background:rgba(247,211,79,.2);color:var(--yw);font-weight:700">⏰ 退勤忘れ(自動退勤)</span>':'';}
 // 役員のみ: 運転管理者/副運転管理者を選任（店舗ごとに複数可）
 function setDriveRole(id,role){
   if(curAcc()?.role!=='executive'){showToast('⚠ 運転管理者の選任は役員のみ可能です');return;}
@@ -4483,6 +4609,7 @@ async function adminStamp(type,fullTimeFlag){
     if(wh)wh.textContent=toHHMM(w);if(oh)oh.textContent=toHHMM(ot);
     S.set('ka_today',todayMap);
     adminAutoSave(td);showToast(_dchkTA?`✅ 退勤・記録を自動保存しました（直行直帰: ${_dchkTA}）`:'✅ 退勤・記録を自動保存しました');
+    openVisitConfirmModal();
   }
 }
 function adminAutoSave(td){
@@ -4638,6 +4765,7 @@ async function execStamp(type,fullTimeFlag){
       S.set('ka_today',todayMap);
       execAutoSave(td);
       showToast(_dchkT?`✅ 退勤・記録を自動保存しました（直行直帰: ${_dchkT}）`:'✅ 退勤・記録を自動保存しました');
+      openVisitConfirmModal();
     }
   }finally{setTimeout(()=>_actionGuard.delete('execStamp'),1000);}
 }
@@ -4867,6 +4995,7 @@ function buildHealthDetail(empId, month){
     return`<div style="padding:8px 0;border-top:1px solid var(--bd)${isHolidayVehicle?';opacity:.8':''}${(missCO||missCI)?';background:rgba(247,95,95,.06)':''}">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px">
         <span class="health-row-date" style="font-weight:700">${r.date.slice(5)}${dow}</span>
+        ${autoCoBadge(r)}
         ${isHolidayVehicle?'<span style="font-size:10px;background:rgba(79,142,247,.12);color:var(--ac);padding:2px 6px;border-radius:4px;font-weight:700">🚗 車両のみ</span>':''}
         ${missCO?'<span style="font-size:10px;background:rgba(247,95,95,.15);color:var(--rd);padding:2px 6px;border-radius:4px;font-weight:700">⚠ 退勤未打刻</span>':''}
         ${missCI?'<span style="font-size:10px;background:rgba(247,95,95,.15);color:var(--rd);padding:2px 6px;border-radius:4px;font-weight:700">⚠ 出勤未打刻</span>':''}
@@ -5130,6 +5259,7 @@ function loadStateFromLocal(){
   lockedEmpMonths=S.get('ka_locked_emp_months')||{};
   alcChecks=S.get('ka_alc_checks')||[];
   pruneAlcChecks(); // 13ヶ月より古い確認記録を削除（1年保存義務+余裕分）
+  autoApproveStaleAlcChecks(); // 4日経過の未承認を運転管理者名義で自動承認・写真削除
   // Migration: assign existing accounts to a default store if they have no storeId
   migrateToMultiStore();
 }

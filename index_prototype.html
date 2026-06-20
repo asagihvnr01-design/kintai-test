@@ -409,7 +409,7 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
   <div class="auth-card">
     <div class="auth-logo">📋</div>
     <div class="auth-title">勤怠・訪問管理</div>
-    <div style="font-size:10px;color:var(--dim);text-align:center;margin-top:2px">v2026.06.15-alc5 (4日自動承認・退勤忘れ・訪問確認・同期消失対策版)</div>
+    <div style="font-size:10px;color:var(--dim);text-align:center;margin-top:2px">v2026.06.15-alc6 (役員自己選任・訪問確認の戻る対応版)</div>
     <div class="auth-sub">メールアドレス（管理者/役員）またはユーザー名（スタッフ）とパスワードでログイン</div>
     <div class="fr"><label class="fl">メールアドレス / ユーザー名</label><input class="fi" id="li-user" autocomplete="username" placeholder="例: admin@gmail.com またはユーザー名"></div>
     <div class="fr"><label class="fl">パスワード</label><input class="fi" type="password" id="li-pass" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
@@ -917,6 +917,11 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
       </div>
     </div>
     <div class="card">
+      <div class="ct">🚗 自分の運転管理者資格</div>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:10px">自分自身を運転管理者・副運転管理者に選任できます（酒気確認の判定権限が付きます）。他の人の選任は店舗の「従業員管理」から行えます。</p>
+      <div id="execDriveRole"></div>
+    </div>
+    <div class="card">
       <div class="ct">📊 全店舗サマリー</div>
       <div id="execSummary"></div>
     </div>
@@ -1055,6 +1060,7 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
       <div class="vrow" id="vc-oncall-input-row"><div><div class="vr-l">オンコール</div><div class="vr-s">待機回数</div></div><div class="vi-wrap"><input type="number" class="vi" id="vc-oncall" min="0" step="1" value=""><span class="vu">回</span></div></div>
     </div>
     <button class="sbv" onclick="submitVisitConfirm()" style="background:var(--gn);width:100%;font-size:16px;font-weight:700;padding:14px;margin-top:8px">✅ 本日の訪問内容を確定して送信</button>
+    <button class="sbv" onclick="visitBackToCheckout()" style="background:var(--sf2);border:1px solid var(--yw);color:var(--yw);width:100%;margin-top:8px">↩ 退勤入力に戻る（送信前に戻す）</button>
     <button class="sbv" onclick="closeVisitConfirmModal()" style="background:var(--sf2);border:1px solid var(--bd);color:var(--dim);width:100%;margin-top:8px">あとで入力する（スキップ）</button>
   </div>
 </div>
@@ -1553,7 +1559,7 @@ function enterApp(acc){
   initGpsForAccount(); // 後方互換用（現在は空関数）
   checkPendingAutoCheckout();
   if(acc.role==='executive'){
-    showScreen('exec');renderExecScreen();execRefreshStampUI();renderAlcStatusSelf();
+    showScreen('exec');renderExecScreen();execRefreshStampUI();renderAlcStatusSelf();renderExecDriveRole();
     const eb=document.getElementById('execBadge');if(eb)eb.textContent='👔 '+acc.name;
   }
   else if(acc.role==='admin'){
@@ -2049,6 +2055,30 @@ function openVisitConfirmModal(){
   document.getElementById('visitConfirmModal').classList.add('open');
 }
 function closeVisitConfirmModal(){document.getElementById('visitConfirmModal').classList.remove('open');}
+// 訪問確認モーダルから「送信前の状態」に戻る：退勤を取り消して勤務中に戻し、退勤アルコールチェックを再表示
+function visitBackToCheckout(){
+  if(!session){closeVisitConfirmModal();return;}
+  const dk=todayKey();
+  const rec=(records[session.id]||[]).find(r=>r.date===dk);
+  if(!rec||!rec.checkin){closeVisitConfirmModal();showToast('⚠ 出勤記録が見つからないため戻れません');return;}
+  const ft=!!rec.fullTimeFlag;
+  // 退勤を取り消し（出勤のみの状態へ）
+  rec.checkout=null;rec.checkoutLoc=null;rec.workMinutes=null;rec.overtimeMinutes=null;rec.autoCheckout=false;
+  // todayMapを勤務中に復元
+  todayMap[session.id]=Object.assign({checkinTime:rec.checkin,checkinDate:dk,checkinLoc:rec.checkinLoc||null}, ft?{fullTimeFlag:true}:{});
+  S.set('ka_records',records);S.set('ka_today',todayMap);
+  // ★写真・酒気確認の記録・各入力は削除しない（送信前に戻すだけ）
+  // UIを勤務中に戻す（ロール別）
+  const r=curAcc()?.role;
+  if(r==='admin'){const b=document.getElementById('aCoBtn');if(b)b.disabled=false;const t=document.getElementById('aCoTime');if(t)t.textContent='--:--';setStA('勤務中','var(--gn)');}
+  else if(r==='executive'){execRefreshStampUI();}
+  else{const b=document.getElementById('coBtnEmp');if(b)b.disabled=false;const t=document.getElementById('coTimeEmp');if(t)t.textContent='--:--';setSt('勤務中','var(--gn)');}
+  closeVisitConfirmModal();
+  // 一個前（退勤アルコールチェック）モーダルを再表示＝送信前の状態
+  const cb=(r==='admin')?(()=>adminStamp('checkout',ft)):(r==='executive')?(()=>execStamp('checkout',ft)):(()=>stamp('checkout',ft));
+  openAlcModal((r==='admin')?'adm':(r==='executive')?'exec':'emp','co',cb,ft);
+  showToast('↩ 送信前に戻しました（写真・入力は保持）');
+}
 function submitVisitConfirm(){
   if(!session)return;
   const dk=todayKey();
@@ -3001,6 +3031,7 @@ function renderAdmin(){
 function renderEmpMgmt(){
   const isExec=curAcc()?.role==='executive';
   const emps=storeAccounts().filter(a=>a.id!==session?.id),el=document.getElementById('empMgmtList');
+  if(!el)return; // 役員ダッシュボード等、リストが無い画面では何もしない
   if(!emps.length){el.innerHTML='<div class="empty">他のアカウントがありません</div>';return;}
   el.innerHTML=emps.map(e=>{
     const roleBdg=e.role==='executive'
@@ -4470,7 +4501,22 @@ function setDriveRole(id,role){
   e.driveMgr=(role==='mgr');e.subDriveMgr=(role==='sub');
   S.set('ka_accounts',accounts);
   renderEmpMgmt();
+  if(typeof renderExecDriveRole==='function')renderExecDriveRole();
+  if(typeof applyAlcTabVisibility==='function')applyAlcTabVisibility();
+  if(typeof updateAlcBadge==='function')updateAlcBadge();
   showToast(role==='none'?`✅ ${e.name} の運転管理者指定を解除しました`:`✅ ${e.name} を${role==='mgr'?'運転管理者':'副運転管理者'}に選任しました`);
+}
+// 役員ダッシュボード: 自分自身の運転管理者資格の付与/解除
+function renderExecDriveRole(){
+  const el=document.getElementById('execDriveRole');if(!el)return;
+  const a=curAcc();if(!a)return;
+  const bs=(active,danger)=>active?(danger?'background:rgba(247,95,95,.12);border:1px solid var(--rd);color:var(--rd)':'background:rgba(61,214,140,.15);border:1px solid var(--gn);color:var(--gn)'):'background:none;border:1px solid var(--bd);color:var(--dim)';
+  el.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="mb" style="padding:6px 14px;${bs(a.driveMgr,false)}" onclick="setDriveRole('${a.id}','mgr')">運転管理者</button>
+    <button class="mb" style="padding:6px 14px;${bs(a.subDriveMgr,false)}" onclick="setDriveRole('${a.id}','sub')">副運転管理者</button>
+    <button class="mb" style="padding:6px 14px;${bs(!a.driveMgr&&!a.subDriveMgr,true)}" onclick="setDriveRole('${a.id}','none')">なし</button>
+  </div>
+  <div style="font-size:11px;color:var(--dim);margin-top:6px">現在: <b style="color:${(a.driveMgr||a.subDriveMgr)?'var(--gn)':'var(--dim)'}">${driveRoleLabel(a)||'未選任'}</b>${(a.driveMgr||a.subDriveMgr)?'　※店舗に入る（管理ダッシュボード）と酒気確認タブが表示され、判定できます':''}</div>`;
 }
 // kintai/health/odo は保存値に関わらず常にtrue（出勤ボタン非表示等の旧機能は廃止）
 function getAdminFeatures(){const f=curAcc()?.adminFeatures||{};return {kintai:true,health:true,odo:true,visits:f.visits!==false,leave:f.leave!==false};}

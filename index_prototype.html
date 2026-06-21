@@ -409,7 +409,7 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
   <div class="auth-card">
     <div class="auth-logo">📋</div>
     <div class="auth-title">勤怠・訪問管理</div>
-    <div style="font-size:10px;color:var(--dim);text-align:center;margin-top:2px">v2026.06.21-alc9 (時間外/エンゼルケア表示トグル・エンゼル¥8,000集計・料金同意確認・変更ログ月折りたたみ対応版)</div>
+    <div style="font-size:10px;color:var(--dim);text-align:center;margin-top:2px">v2026.06.21-alc10 (確認履歴を月ごと折りたたみ・役員の酒気確認を店舗別=管理者と同一仕様に対応版)</div>
     <div class="auth-sub">メールアドレス（管理者/役員）またはユーザー名（スタッフ）とパスワードでログイン</div>
     <div class="fr"><label class="fl">メールアドレス / ユーザー名</label><input class="fi" id="li-user" autocomplete="username" placeholder="例: admin@gmail.com またはユーザー名"></div>
     <div class="fr"><label class="fl">パスワード</label><input class="fi" type="password" id="li-pass" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
@@ -3983,13 +3983,29 @@ function renderAlcQueue(){
   const ck=[cut.getFullYear(),String(cut.getMonth()+1).padStart(2,'0'),String(cut.getDate()).padStart(2,'0')].join('-');
   const hist=alcChecks.filter(c=>(c.status==='ok'||c.status==='ng')&&ids.has(c.empId)&&c.date>=ck)
     .sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
-  const histHtml=hist.length?hist.map(c=>`
+  _renderAlcHistGrouped(histEls,hist);
+}
+function _alcHistRow(c){
+  return `
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid var(--bd);font-size:12px;flex-wrap:wrap">
       <span style="flex:1;min-width:200px">${c.status==='ok'?'✅':'🚫'} ${c.empName}（${c.type==='ci'?'出勤':'退勤'} ${c.date} ${c.time}）<b style="font-family:var(--mo);color:${alcValColor(c.val)}">${parseFloat(c.val||0).toFixed(2)}</b><br>
       <span style="color:var(--dim);font-size:11px">${c.confirmerRole?c.confirmerRole+'：':''}${c.confirmedBy||''}／${c.confirmedAt||''}／${c.method||''}${c.note?'／'+c.note:''}</span></span>
       <button class="hbtn" onclick="reopenAlcCheck('${c.id}')" style="flex-shrink:0">↩ 判定を変更</button>
-    </div>`).join(''):'<div class="empty">履歴はありません</div>';
-  histEls.forEach(el=>el.innerHTML=histHtml);
+    </div>`;
+}
+// 確認履歴を月ごとに折りたたみ表示（最新月は開く・過去月は閉じる・各月に件数。確認待ちは折りたたまない）
+function _renderAlcHistGrouped(els,hist){
+  if(!hist||!hist.length){els.forEach(el=>{if(el)el.innerHTML='<div class="empty">履歴はありません</div>';});return;}
+  const groups={};
+  hist.forEach(c=>{const ym=(c.date&&/^\d{4}-\d{2}/.test(c.date))?c.date.slice(0,7):'----';(groups[ym]=groups[ym]||[]).push(c);});
+  const months=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
+  const html=months.map((ym,i)=>{
+    const [yy,mm]=ym.split('-');
+    const label=(yy!=='----'&&mm)?`${parseInt(yy)}年${parseInt(mm)}月`:'日付不明';
+    const items=groups[ym].map(_alcHistRow).join('');
+    return`<details${i===0?' open':''} style="margin-bottom:6px"><summary style="cursor:pointer;padding:8px 10px;background:var(--sf2);border-radius:8px;font-size:13px;font-weight:700;list-style:none">📅 ${label}　<span style="color:var(--dim);font-weight:400">${groups[ym].length}件</span></summary><div style="padding:6px 2px 2px">${items}</div></details>`;
+  }).join('');
+  els.forEach(el=>{if(el)el.innerHTML=html;});
 }
 function confirmAlcCheck(id){
   // 「酒気帯びなし」判定（異常ありは openAlcNg → submitAlcNg 経由）
@@ -4604,10 +4620,10 @@ function renderExecDriveRole(){
     <button class="mb" style="padding:6px 14px;${bs(!has,true)}" onclick="setDriveRole('${a.id}','none')">なし</button>
   </div>
   <div style="font-size:11px;color:var(--dim);margin-top:6px">現在: <b style="color:${has?'var(--gn)':'var(--dim)'}">${driveRoleLabel(a)||'未選任'}</b>${has?'　※下に酒気確認の確認キューが表示され、自分の分も含め判定できます':''}</div>`;
-  // 役員ダッシュボードの酒気確認カードを権限に応じて表示
+  // 役員の酒気確認は「各店舗に入ってから」管理者と同一の画面で行う（店舗別スコープ）。
+  // そのため役員ダッシュボード上の全店舗まとめ表示カードは常に非表示にする。
   const card=document.getElementById('execAlcCard');
-  if(card)card.style.display=canConfirmAlc()?'':'none';
-  if(canConfirmAlc()){renderAlcQueue();updateAlcBadge();}
+  if(card)card.style.display='none';
 }
 // kintai/health/odo は保存値に関わらず常にtrue（出勤ボタン非表示等の旧機能は廃止）
 function getAdminFeatures(){const f=curAcc()?.adminFeatures||{};return {kintai:true,health:true,odo:true,visits:f.visits!==false,leave:f.leave!==false};}

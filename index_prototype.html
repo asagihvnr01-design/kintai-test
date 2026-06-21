@@ -409,7 +409,7 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
   <div class="auth-card">
     <div class="auth-logo">📋</div>
     <div class="auth-title">勤怠・訪問管理</div>
-    <div style="font-size:10px;color:var(--dim);text-align:center;margin-top:2px">v2026.06.15-alc6 (役員自己選任・訪問確認の戻る対応版)</div>
+    <div style="font-size:10px;color:var(--dim);text-align:center;margin-top:2px">v2026.06.15-alc7 (退勤フロー：次へ→訪問確認→まとめて送信)</div>
     <div class="auth-sub">メールアドレス（管理者/役員）またはユーザー名（スタッフ）とパスワードでログイン</div>
     <div class="fr"><label class="fl">メールアドレス / ユーザー名</label><input class="fi" id="li-user" autocomplete="username" placeholder="例: admin@gmail.com またはユーザー名"></div>
     <div class="fr"><label class="fl">パスワード</label><input class="fi" type="password" id="li-pass" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
@@ -1059,9 +1059,9 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
       <div class="vsec" id="vc-oncall-row">📞 オンコール</div>
       <div class="vrow" id="vc-oncall-input-row"><div><div class="vr-l">オンコール</div><div class="vr-s">待機回数</div></div><div class="vi-wrap"><input type="number" class="vi" id="vc-oncall" min="0" step="1" value=""><span class="vu">回</span></div></div>
     </div>
-    <button class="sbv" onclick="submitVisitConfirm()" style="background:var(--gn);width:100%;font-size:16px;font-weight:700;padding:14px;margin-top:8px">✅ 本日の訪問内容を確定して送信</button>
-    <button class="sbv" onclick="visitBackToCheckout()" style="background:var(--sf2);border:1px solid var(--yw);color:var(--yw);width:100%;margin-top:8px">↩ 退勤入力に戻る（送信前に戻す）</button>
-    <button class="sbv" onclick="closeVisitConfirmModal()" style="background:var(--sf2);border:1px solid var(--bd);color:var(--dim);width:100%;margin-top:8px">あとで入力する（スキップ）</button>
+    <button class="sbv" onclick="submitVisitConfirm()" style="background:var(--gn);width:100%;font-size:16px;font-weight:700;padding:14px;margin-top:8px">✅ 送信（退勤・写真・訪問実績をまとめて送信）</button>
+    <button class="sbv" onclick="visitBackToCheckout()" style="background:var(--sf2);border:1px solid var(--yw);color:var(--yw);width:100%;margin-top:8px">↩ 退勤入力（写真）に戻る</button>
+    <button class="sbv" onclick="skipVisitConfirm()" style="background:var(--sf2);border:1px solid var(--bd);color:var(--dim);width:100%;margin-top:8px">あとで入力する（退勤のみ送信）</button>
   </div>
 </div>
 
@@ -1091,9 +1091,9 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
       <div id="alc-m-stat" style="font-size:12px;color:var(--dim);margin-bottom:8px">📷 未撮影</div>
       <button class="sbv" onclick="alcPickPhoto()" style="background:var(--sf2);border:1px solid var(--bd)">📷 検知器と顔を撮影する</button>
     </div>
-    <button class="sbv" id="alc-m-go" onclick="alcSubmit(false)" style="background:var(--gn);width:100%;font-size:18px;font-weight:700;padding:16px;margin-top:4px">✅ 送信して打刻</button>
-    <button class="sbv" onclick="closeAlcModal()" style="background:var(--sf2);border:1px solid var(--bd);color:var(--dim);width:100%;margin-top:8px">キャンセル</button>
-    <button onclick="alcSubmit(true)" style="display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--yw);font-size:12px;text-decoration:underline;cursor:pointer">📵 写真を撮れない場合はこちら（電話確認が必要になります）</button>
+    <button class="sbv" id="alc-m-go" onclick="alcPrimary()" style="background:var(--gn);width:100%;font-size:18px;font-weight:700;padding:16px;margin-top:4px">✅ 送信して打刻</button>
+    <button class="sbv" onclick="cancelAlcModal()" style="background:var(--sf2);border:1px solid var(--bd);color:var(--dim);width:100%;margin-top:8px">キャンセル</button>
+    <button id="alc-m-skip" onclick="alcSkip()" style="display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--yw);font-size:12px;text-decoration:underline;cursor:pointer">📵 写真を撮れない場合はこちら（電話確認が必要になります）</button>
   </div>
 </div>
 
@@ -2055,44 +2055,51 @@ function openVisitConfirmModal(){
   document.getElementById('visitConfirmModal').classList.add('open');
 }
 function closeVisitConfirmModal(){document.getElementById('visitConfirmModal').classList.remove('open');}
-// 訪問確認モーダルから「送信前の状態」に戻る：退勤を取り消して勤務中に戻し、退勤アルコールチェックを再表示
+// 送信前に戻る：まだ何もコミットしていないので、保持中の写真・入力値のまま退勤アルコールチェックを再表示（取り直し不要）
 function visitBackToCheckout(){
-  if(!session){closeVisitConfirmModal();return;}
-  const dk=todayKey();
-  const rec=(records[session.id]||[]).find(r=>r.date===dk);
-  if(!rec||!rec.checkin){closeVisitConfirmModal();showToast('⚠ 出勤記録が見つからないため戻れません');return;}
-  const ft=!!rec.fullTimeFlag;
-  // 退勤を取り消し（出勤のみの状態へ）
-  rec.checkout=null;rec.checkoutLoc=null;rec.workMinutes=null;rec.overtimeMinutes=null;rec.autoCheckout=false;
-  // todayMapを勤務中に復元
-  todayMap[session.id]=Object.assign({checkinTime:rec.checkin,checkinDate:dk,checkinLoc:rec.checkinLoc||null}, ft?{fullTimeFlag:true}:{});
-  S.set('ka_records',records);S.set('ka_today',todayMap);
-  // ★写真・酒気確認の記録・各入力は削除しない（送信前に戻すだけ）
-  // UIを勤務中に戻す（ロール別）
-  const r=curAcc()?.role;
-  if(r==='admin'){const b=document.getElementById('aCoBtn');if(b)b.disabled=false;const t=document.getElementById('aCoTime');if(t)t.textContent='--:--';setStA('勤務中','var(--gn)');}
-  else if(r==='executive'){execRefreshStampUI();}
-  else{const b=document.getElementById('coBtnEmp');if(b)b.disabled=false;const t=document.getElementById('coTimeEmp');if(t)t.textContent='--:--';setSt('勤務中','var(--gn)');}
+  const pc=_pendingCheckout;
   closeVisitConfirmModal();
-  // 一個前（退勤アルコールチェック）モーダルを再表示＝送信前の状態
-  const cb=(r==='admin')?(()=>adminStamp('checkout',ft)):(r==='executive')?(()=>execStamp('checkout',ft)):(()=>stamp('checkout',ft));
-  openAlcModal((r==='admin')?'adm':(r==='executive')?'exec':'emp','co',cb,ft);
-  showToast('↩ 送信前に戻しました（写真・入力は保持）');
+  if(!pc)return;
+  openAlcModal(pc.dom,'co',pc.cb,pc.ftFlag,true); // noAutoCam=true（カメラ自動起動せず写真を保持）
+  if(_alcCtx){
+    _alcCtx.blob=pc.blob;
+    const valEl=document.getElementById('alc-m-val');if(valEl)valEl.value=pc.val;
+    const dc=document.getElementById('alc-m-dchk');if(dc)dc.checked=pc.dchkChecked;
+    if(pc.blob){
+      const pv=document.getElementById('alc-m-prev');if(pv){pv.src=URL.createObjectURL(pc.blob);pv.style.display='inline-block';}
+      const st=document.getElementById('alc-m-stat');if(st){st.textContent='📷 撮影済み（撮り直す場合は再度撮影）';st.style.color='var(--gn)';}
+    }
+  }
+  showToast('↩ 送信前に戻りました（写真・入力は保持）');
 }
-function submitVisitConfirm(){
+// 最後の送信：退勤(写真アップロード・酒気確認・打刻)＋本日の訪問実績をまとめてコミット
+async function submitVisitConfirm(){
   if(!session)return;
-  const dk=todayKey();
-  const g=id=>parseFloat(document.getElementById(id)?.value)||0;
-  const rec={date:dk,sales:g('vc-sales'),c30:g('vc-c30'),c60:g('vc-c60'),c90:g('vc-c90'),medical:g('vc-med'),staff:g('vc-stf'),pre:g('vc-pre'),contract:g('vc-con'),training:g('vc-trn'),overtime:g('vc-ov'),oncall:g('vc-oncall')};
-  if(!visits[session.id])visits[session.id]=[];
-  const idx=visits[session.id].findIndex(v=>v.date===dk);
-  if(idx>=0)visits[session.id][idx]=rec;else visits[session.id].unshift(rec);
-  S.set('ka_visits',visits);
-  closeVisitConfirmModal();
-  if(typeof loadVisit==='function')loadVisit(dk);
-  if(typeof renderVSummary==='function')renderVSummary();
-  if(typeof renderVSummaryA==='function')renderVSummaryA();
-  showToast('✅ 本日の訪問実績を確定・送信しました');
+  if(_actionGuard.has('visitSubmit'))return;_actionGuard.add('visitSubmit');
+  try{
+    if(_pendingCheckout){const pc=_pendingCheckout;_pendingCheckout=null;await _alcCommit(pc);}
+    const dk=todayKey();
+    const g=id=>parseFloat(document.getElementById(id)?.value)||0;
+    const rec={date:dk,sales:g('vc-sales'),c30:g('vc-c30'),c60:g('vc-c60'),c90:g('vc-c90'),medical:g('vc-med'),staff:g('vc-stf'),pre:g('vc-pre'),contract:g('vc-con'),training:g('vc-trn'),overtime:g('vc-ov'),oncall:g('vc-oncall')};
+    if(!visits[session.id])visits[session.id]=[];
+    const idx=visits[session.id].findIndex(v=>v.date===dk);
+    if(idx>=0)visits[session.id][idx]=rec;else visits[session.id].unshift(rec);
+    S.set('ka_visits',visits);
+    closeVisitConfirmModal();
+    if(typeof loadVisit==='function')loadVisit(dk);
+    if(typeof renderVSummary==='function')renderVSummary();
+    if(typeof renderVSummaryA==='function')renderVSummaryA();
+    showToast('✅ 送信しました（退勤・写真・本日の訪問実績）');
+  }finally{setTimeout(()=>_actionGuard.delete('visitSubmit'),1000);}
+}
+// 訪問は後で入力（スキップ）：退勤（写真・打刻）は送信する
+async function skipVisitConfirm(){
+  if(_actionGuard.has('visitSubmit'))return;_actionGuard.add('visitSubmit');
+  try{
+    if(_pendingCheckout){const pc=_pendingCheckout;_pendingCheckout=null;await _alcCommit(pc);}
+    closeVisitConfirmModal();
+    showToast('✅ 退勤を送信しました（訪問実績は後で入力できます）');
+  }finally{setTimeout(()=>_actionGuard.delete('visitSubmit'),1000);}
 }
 function loadVisit(dk){
   if(!session)return;
@@ -3734,7 +3741,7 @@ function alcEls(dom){
   if(dom==='exec')return{h:'eHealthSt',a:'eAlcVal',ao:'eAlcValOut'};
   return{h:'healthSt',a:'alcVal',ao:'alcValOut'};
 }
-function openAlcModal(dom,type,cb,ftFlag){
+function openAlcModal(dom,type,cb,ftFlag,noAutoCam){
   // 機能OFFアカウント・Supabase未接続時は従来通り直接打刻
   if(!alcFeatureOn()||!DB.configured()){cb();return;}
   if(isMonthLocked(todayKey().slice(0,7),session?.id)){showToast('🔒 この月はロックされています');return;}
@@ -3755,13 +3762,15 @@ function openAlcModal(dom,type,cb,ftFlag){
   document.getElementById('alcModalTitle').textContent=(type==='ci'?'🟢 出勤前':'🔴 退勤時')+' アルコールチェック';
   const pv=document.getElementById('alc-m-prev');if(pv){pv.style.display='none';pv.removeAttribute('src');}
   const st=document.getElementById('alc-m-stat');if(st){st.textContent='📷 未撮影';st.style.color='var(--dim)';}
-  const go=document.getElementById('alc-m-go');if(go){go.disabled=false;go.textContent='✅ 送信して打刻';}
+  const coVisit=(type==='co'&&getAdminFeatures().visits!==false); // 退勤かつ訪問実績あり→「次へ」
+  const go=document.getElementById('alc-m-go');if(go){go.disabled=false;go.textContent=coVisit?'次へ（訪問実績の確認）':'✅ 送信して打刻';}
+  const sk=document.getElementById('alc-m-skip');if(sk)sk.textContent=coVisit?'📵 写真なしで次へ（電話確認が必要）':'📵 写真を撮れない場合はこちら（電話確認が必要になります）';
   const dc=document.getElementById('alc-m-dchk');if(dc)dc.checked=_dchkDefault;
   document.getElementById('alcModal').classList.add('open');
   dchkHint();
-  // 簡略化: モーダルを開いたら即カメラを起動（撮影ボタンのタップを省略）。
+  // 簡略化: モーダルを開いたら即カメラを起動（撮影ボタンのタップを省略）。戻る再表示時(noAutoCam)は写真を保持するため起動しない。
   // ※ボタン押下のユーザー操作内で同期的に呼ぶ必要があるためsetTimeoutは使わない。
-  try{alcPickPhoto();}catch(e){}
+  if(!noAutoCam){try{alcPickPhoto();}catch(e){}}
 }
 function closeAlcModal(){document.getElementById('alcModal').classList.remove('open');_alcCtx=null;}
 function alcPickPhoto(){document.getElementById('alc-m-file').click();}
@@ -3776,56 +3785,63 @@ async function alcFileChosen(inp){
   const st=document.getElementById('alc-m-stat');
   if(st){st.textContent='📷 撮影済み（撮り直す場合は再度撮影ボタン）';st.style.color='var(--gn)';}
 }
+let _pendingCheckout=null; // 退勤: 「次へ」で保留中のコンテキスト（最後の送信までコミットしない）
+// アルコールチェック確定処理（写真アップロード＋酒気確認記録作成＋打刻cb実行）
+async function _alcCommit(pc){
+  const els=alcEls(pc.dom);
+  const tgt=document.getElementById(pc.type==='ci'?els.a:els.ao);if(tgt)tgt.value=pc.val;
+  if(pc.type==='ci'){const hC=document.getElementById(els.h);if(hC)hC.value=pc.health||'良好';}
+  let photoPath=null,status='nophoto';
+  if(!pc.skip&&pc.blob){
+    photoPath=session.id+'/'+todayKey()+'_'+pc.type+'_'+Date.now()+'.jpg';
+    try{
+      await Promise.race([alcUpload(pc.blob,photoPath),new Promise((_,rj)=>setTimeout(()=>rj(new Error('timeout')),20000))]);
+      status='pending';
+    }catch(e){console.warn('alc upload failed:',e);photoPath=null;status='nophoto';showToast('⚠ 写真の送信に失敗しました。打刻は続行します（電話確認が必要です）');}
+  }
+  const acc=curAcc();
+  alcChecks.push({id:uid('alc'),empId:session.id,empName:acc?.name||'',storeId:acc?.storeId||null,
+    date:todayKey(),type:pc.type,time:alcNowTime(),val:pc.val,photo:photoPath,status,
+    confirmedBy:null,confirmerRole:null,confirmedAt:null,method:null,note:null,rolledBack:false,updatedAt:Date.now()});
+  saveAlcChecks();
+  _dchkDefault=!!pc.dchkChecked;
+  _dchkOverride=pc.dchkChecked?{type:pc.type,time:dchkTargetTime(pc.type,pc.ftFlag)}:null;
+  await pc.cb();
+  renderAlcStatusSelf();updateAlcBadge();
+}
+// 現在のモーダル状態から保留コンテキストを生成
+function _alcCtxToPC(skip){
+  const v=document.getElementById('alc-m-val').value||'0.00';
+  const dc=document.getElementById('alc-m-dchk');
+  const h=document.getElementById('alc-m-health');
+  return {dom:_alcCtx.dom,type:_alcCtx.type,cb:_alcCtx.cb,blob:skip?null:_alcCtx.blob,val:v,skip:!!skip,
+    dchkChecked:dc?dc.checked:true,ftFlag:_alcCtx.ftFlag,health:h?h.value:'良好'};
+}
+// 主ボタン：出勤=送信して打刻 / 退勤(訪問あり)=次へ / 退勤(訪問なし)=送信して打刻
+function alcPrimary(){ if(_alcCtx&&_alcCtx.type==='co'&&getAdminFeatures().visits!==false)alcNext(false); else alcSubmit(false); }
+function alcSkip(){ if(_alcCtx&&_alcCtx.type==='co'&&getAdminFeatures().visits!==false)alcNext(true); else alcSubmit(true); }
+// 即時打刻（出勤、または退勤で訪問実績が非表示の人）
 async function alcSubmit(skip){
   if(!_alcCtx)return;
   if(_actionGuard.has('alcSubmit'))return;
-  const v=document.getElementById('alc-m-val').value||'0.00'; // 未入力は0.00として扱う
   if(!skip&&!_alcCtx.blob){showToast('⚠ 「📷 検知器と顔を撮影する」から撮影してください');return;}
-  if(skip&&!confirm('写真なしで打刻しますか？\n管理者による電話等での確認が必要になります。'))return;
+  if(skip&&!confirm('写真なしで'+(_alcCtx.type==='ci'?'打刻':'送信')+'しますか？\n管理者による電話等での確認が必要になります。'))return;
   _actionGuard.add('alcSubmit');
-  const ctx=_alcCtx;
-  try{
-    // 測定値・体調を今日タブの隠し入力欄へ反映（既存の保存経路=autoSave/MERGEで記録に残る）
-    const els=alcEls(ctx.dom);
-    const tgt=document.getElementById(ctx.type==='ci'?els.a:els.ao);if(tgt)tgt.value=v;
-    if(ctx.type==='ci'){ // 体調は出勤時のみ。既定は良好。
-      const hv=document.getElementById('alc-m-health')?.value||'良好';
-      const hCarrier=document.getElementById(els.h);if(hCarrier)hCarrier.value=hv;
-    }
-    const go=document.getElementById('alc-m-go');
-    if(go){go.disabled=true;go.textContent='送信中...';}
-    let photoPath=null,status='nophoto';
-    if(!skip&&ctx.blob){
-      photoPath=session.id+'/'+todayKey()+'_'+ctx.type+'_'+Date.now()+'.jpg';
-      try{
-        await Promise.race([
-          alcUpload(ctx.blob,photoPath),
-          new Promise((_,rj)=>setTimeout(()=>rj(new Error('timeout')),20000))
-        ]);
-        status='pending';
-      }catch(e){
-        console.warn('alc upload failed:',e);
-        photoPath=null;status='nophoto';
-        showToast('⚠ 写真の送信に失敗しました。打刻は続行します（電話確認が必要です）');
-      }
-    }
-    const acc=curAcc();
-    alcChecks.push({id:uid('alc'),empId:session.id,empName:acc?.name||'',storeId:acc?.storeId||null,
-      date:todayKey(),type:ctx.type,time:alcNowTime(),val:v,photo:photoPath,status,
-      confirmedBy:null,confirmerRole:null,confirmedAt:null,method:null,note:null,rolledBack:false,updatedAt:Date.now()});
-    saveAlcChecks();
-    // 直行直帰: チェックONなら打刻時刻を所定時刻に上書き（酒気確認の記録は実時刻のまま）
-    const dc=document.getElementById('alc-m-dchk');
-    _dchkDefault=dc?dc.checked:true;
-    _dchkOverride=(dc&&dc.checked)?{type:ctx.type,time:dchkTargetTime(ctx.type,ctx.ftFlag)}:null;
-    closeAlcModal();
-    if(go){go.disabled=false;go.textContent='✅ 送信して打刻';}
-    await ctx.cb();
-    renderAlcStatusSelf();updateAlcBadge();
-  }finally{
-    setTimeout(()=>_actionGuard.delete('alcSubmit'),1000);
-  }
+  const pc=_alcCtxToPC(skip);
+  const go=document.getElementById('alc-m-go');if(go){go.disabled=true;go.textContent='送信中...';}
+  try{ closeAlcModal(); await _alcCommit(pc); }
+  finally{ if(go)go.disabled=false; setTimeout(()=>_actionGuard.delete('alcSubmit'),1000); }
 }
+// 退勤：次へ（ここではコミットせず、撮影写真・入力値を保持して訪問実績確認へ）
+async function alcNext(skip){
+  if(!_alcCtx)return;
+  if(!skip&&!_alcCtx.blob){showToast('⚠ 「📷 検知器と顔を撮影する」から撮影してください');return;}
+  if(skip&&!confirm('写真なしで進みますか？\n管理者による電話等での確認が必要になります。'))return;
+  _pendingCheckout=_alcCtxToPC(skip);
+  closeAlcModal();
+  openVisitConfirmModal();
+}
+function cancelAlcModal(){_pendingCheckout=null;closeAlcModal();}
 // ── 退勤フロー入口（モーダル経由で打刻） ──
 function empCheckoutFlow(){
   const td=todayMap[session?.id];
@@ -4085,7 +4101,6 @@ async function _stampInner(type,fullTimeFlag){
     // 出勤日(checkinDate)を基準に記録を保存（日付跨ぎ対応）
     autoSaveRecordA(td,td.checkinDate||todayKey());
         showToast(_dchkT?`✅ 退勤・記録を自動保存しました（直行直帰: ${_dchkT}）`:'✅ 退勤・記録を自動保存しました');
-    openVisitConfirmModal();
   }
 }
 
@@ -4655,7 +4670,6 @@ async function adminStamp(type,fullTimeFlag){
     if(wh)wh.textContent=toHHMM(w);if(oh)oh.textContent=toHHMM(ot);
     S.set('ka_today',todayMap);
     adminAutoSave(td);showToast(_dchkTA?`✅ 退勤・記録を自動保存しました（直行直帰: ${_dchkTA}）`:'✅ 退勤・記録を自動保存しました');
-    openVisitConfirmModal();
   }
 }
 function adminAutoSave(td){
@@ -4811,7 +4825,6 @@ async function execStamp(type,fullTimeFlag){
       S.set('ka_today',todayMap);
       execAutoSave(td);
       showToast(_dchkT?`✅ 退勤・記録を自動保存しました（直行直帰: ${_dchkT}）`:'✅ 退勤・記録を自動保存しました');
-      openVisitConfirmModal();
     }
   }finally{setTimeout(()=>_actionGuard.delete('execStamp'),1000);}
 }

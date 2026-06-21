@@ -409,7 +409,7 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
   <div class="auth-card">
     <div class="auth-logo">📋</div>
     <div class="auth-title">勤怠・訪問管理</div>
-    <div style="font-size:10px;color:var(--dim);text-align:center;margin-top:2px">v2026.06.15-alc7 (退勤フロー：次へ→訪問確認→まとめて送信)</div>
+    <div style="font-size:10px;color:var(--dim);text-align:center;margin-top:2px">v2026.06.15-alc8 (全機能検証・自己確認/補助者・CSV/バックアップ対応版)</div>
     <div class="auth-sub">メールアドレス（管理者/役員）またはユーザー名（スタッフ）とパスワードでログイン</div>
     <div class="fr"><label class="fl">メールアドレス / ユーザー名</label><input class="fi" id="li-user" autocomplete="username" placeholder="例: admin@gmail.com またはユーザー名"></div>
     <div class="fr"><label class="fl">パスワード</label><input class="fi" type="password" id="li-pass" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
@@ -461,12 +461,8 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
       <div id="alcStatusEmp" style="margin-top:8px"></div>
     </div>
     <div class="card">
-      <button class="btn-odo" onclick="openHolidayOdoModal()" style="width:100%">🚗 休日利用（走行距離のみ）</button>
-      <p style="font-size:11px;color:var(--yw);margin-top:6px;text-align:center">※ 出勤せず車両のみ使用した日はこちら（オドメーターのみ記録）</p>
-    </div>
-    <div class="fr" style="padding:0 1px 4px">
-      <label class="fl">メモ</label>
-      <input type="text" class="fi" id="todayMemo" placeholder="特記事項があれば入力">
+      <button class="btn-odo" onclick="openHolidayOdoModal()" style="width:100%">🚗 休日利用（走行距離・利用目的）</button>
+      <p style="font-size:11px;color:var(--yw);margin-top:6px;text-align:center">※ 出勤せず車両のみ使用した日はこちら（オドメーターと利用目的を記録）</p>
     </div>
     <p style="font-size:11px;color:var(--dim);text-align:center;margin-top:4px">💡 出勤・退勤の打刻はそれぞれ写真チェック後に確定します</p>
     <!-- データ保持用（非表示）: 体調・アルコール・ODOはモーダルで入力 -->
@@ -679,12 +675,8 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
       </div>
     </div>
     <div class="card">
-      <button class="btn-odo" onclick="openHolidayOdoModal()" style="width:100%">🚗 休日利用（走行距離のみ）</button>
-      <p style="font-size:11px;color:var(--yw);margin-top:6px;text-align:center">※ 出勤せず車両のみ使用した日はこちら（オドメーターのみ記録）</p>
-    </div>
-    <div class="fr" style="padding:0 1px 4px">
-      <label class="fl">メモ</label>
-      <input type="text" class="fi" id="aTodayMemo" placeholder="特記事項があれば入力">
+      <button class="btn-odo" onclick="openHolidayOdoModal()" style="width:100%">🚗 休日利用（走行距離・利用目的）</button>
+      <p style="font-size:11px;color:var(--yw);margin-top:6px;text-align:center">※ 出勤せず車両のみ使用した日はこちら（オドメーターと利用目的を記録）</p>
     </div>
     <p style="font-size:11px;color:var(--dim);text-align:center;margin-top:4px">💡 出勤・退勤の打刻はそれぞれ写真チェック後に確定します</p>
     <!-- データ保持用（非表示）: 体調・アルコール・ODOはモーダルで入力 -->
@@ -905,11 +897,7 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
       </div>
       <div class="loc-badge"><div class="loc-dot" id="eLocDot"></div><span id="eLocTxt">位置情報: 未取得</span></div>
       <div id="alcStatusExec" style="margin-top:8px"></div>
-      <button class="btn-odo" onclick="openHolidayOdoModal()" style="width:100%;margin-top:10px">🚗 休日利用（走行距離のみ）</button>
-      <div class="fr" style="padding:8px 1px 0">
-        <label class="fl">メモ</label>
-        <input type="text" class="fi" id="eTodayMemo" placeholder="特記事項があれば入力">
-      </div>
+      <button class="btn-odo" onclick="openHolidayOdoModal()" style="width:100%;margin-top:10px">🚗 休日利用（走行距離・利用目的）</button>
       <!-- データ保持用（非表示） -->
       <div style="display:none" aria-hidden="true">
         <select id="eHealthSt"><option>良好</option><option>普通</option><option>不調</option></select>
@@ -920,6 +908,13 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
       <div class="ct">🚗 自分の運転管理者資格</div>
       <p style="font-size:12px;color:var(--dim);margin-bottom:10px">自分自身を運転管理者・副運転管理者に選任できます（酒気確認の判定権限が付きます）。他の人の選任は店舗の「従業員管理」から行えます。</p>
       <div id="execDriveRole"></div>
+    </div>
+    <div class="card" id="execAlcCard" style="display:none">
+      <div class="ct">🍃 酒気帯び確認（未確認）<span class="badge-dot" id="alcBadgeExec"></span></div>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:11px">写真の顔色・表情と検知器の測定値を確認し、判定してください。写真なしの場合は電話等で本人と直接対話し、声の調子を確認してください。<b>確認すると写真は自動削除されます</b>（確認記録は1年間保存されます）。自分自身の分もここで確認できます。</p>
+      <div id="alcQueueListExec"></div>
+      <div class="ct" style="margin-top:14px">確認履歴（直近14日）</div>
+      <div id="alcHistListExec"></div>
     </div>
     <div class="card">
       <div class="ct">📊 全店舗サマリー</div>
@@ -1021,12 +1016,16 @@ body{padding-bottom:env(safe-area-inset-bottom,20px)}
 <!-- Holiday (ODO only) Modal -->
 <div class="modal-ov" id="holidayOdoModal">
   <div class="modal">
-    <div class="modal-title">🚗 休日利用（走行距離のみ）</div>
-    <p style="font-size:12px;color:var(--dim);margin-bottom:10px">出勤せず車両のみ使用した日の記録です。オドメーター総距離だけを入力してください（写真・アルコールチェックは不要）。</p>
+    <div class="modal-title">🚗 休日利用（走行距離・利用目的）</div>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:10px">出勤せず車両のみ使用した日の記録です。オドメーター総距離と利用目的を入力してください（写真・アルコールチェックは不要）。</p>
     <div style="background:var(--sf2);border:2px solid var(--yw);border-radius:12px;padding:14px;margin-bottom:10px">
       <label class="fl" style="font-size:14px;font-weight:700;text-align:center;display:block;margin-bottom:8px">🚗 オドメーター総距離 (km) <span style="color:var(--rd)">必須</span></label>
       <input type="number" class="fi" id="hol-odo" placeholder="例: 12450" min="0" step="0.1" oninput="holOdoHint()" style="font-size:24px;text-align:center;font-family:var(--mo);height:auto;padding:12px">
       <div class="odo-h" id="hol-odo-h" style="text-align:center;margin-top:6px"></div>
+    </div>
+    <div class="fr">
+      <label class="fl">📝 利用目的 <span style="color:var(--rd)">必須</span></label>
+      <input type="text" class="fi" id="hol-purpose" placeholder="例：買い物利用、娯楽施設移動 など">
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
       <button class="sbv" onclick="closeHolidayOdoModal()" style="background:var(--sf2);border:1px solid var(--bd);color:var(--dim)">キャンセル</button>
@@ -1950,6 +1949,8 @@ function openHolidayOdoModal(){
   if(!session)return;
   if(isMonthLocked(todayKey().slice(0,7),session?.id)){showToast('🔒 この月はロックされています');return;}
   const inp=document.getElementById('hol-odo');if(inp)inp.value='';
+  const rec=(records[session.id]||[]).find(r=>r.date===todayKey());
+  const pe=document.getElementById('hol-purpose');if(pe)pe.value=(rec&&rec.memo)?rec.memo:''; // 既存の利用目的があれば初期表示
   holOdoHint();
   document.getElementById('holidayOdoModal').classList.add('open');
 }
@@ -1960,13 +1961,15 @@ function submitHolidayOdo(){
   if(isMonthLocked(dk.slice(0,7),session?.id)){showToast('🔒 この月はロックされています');return;}
   const odoStr=document.getElementById('hol-odo').value;
   if(!odoStr||isNaN(parseFloat(odoStr))){const h=document.getElementById('hol-odo-h');if(h)h.innerHTML='<span style="color:var(--rd)">⚠ オドメーター値を入力してください</span>';return;}
+  const purpose=(document.getElementById('hol-purpose')?.value||'').trim();
+  if(!purpose){const pe=document.getElementById('hol-purpose');if(pe)pe.focus();showToast('⚠ 利用目的を入力してください（例：買い物利用、娯楽施設移動）');return;}
   const odoNum=parseFloat(odoStr);
   const empId=session.id;
   if(!records[empId])records[empId]=[];
   const rec=records[empId].find(r=>r.date===dk);
-  // 休日利用=ODOのみ記録（出勤/退勤・体調・アルコールは付けない）
-  if(rec){rec.odometer=odoNum;rec.todayKm=null;}
-  else records[empId].unshift({date:dk,odometer:odoNum,todayKm:null});
+  // 休日利用=ODO＋利用目的を記録（利用目的はrec.memoに保存→CSV・サマリーに反映）
+  if(rec){rec.odometer=odoNum;rec.todayKm=null;rec.memo=purpose;}
+  else records[empId].unshift({date:dk,odometer:odoNum,todayKm:null,memo:purpose});
   records[empId].sort((a,b)=>b.date.localeCompare(a.date));
   recalcOdoKm(empId,dk);
   S.set('ka_records',records);
@@ -2118,16 +2121,16 @@ function loadVisit(dk){
 // ═══════════════════════════════════
 // CSV EXPORT
 // ═══════════════════════════════════
-function exportCSV(month,targetStoreId){
+function buildAttendanceCsv(month,targetStoreId){
   // targetStoreId が指定されていれば単一店舗、なければ全店舗（役員向け）
   const targetAccs=targetStoreId
     ? accounts.filter(a=>a.storeId===targetStoreId)
     : accounts.filter(a=>stores.some(st=>st.id===a.storeId));
-  if(!targetAccs.length){showToast('⚠ 対象従業員がいません');return;}
+  if(!targetAccs.length){showToast('⚠ 対象従業員がいません');return null;}
   const [y,m]=month.split('-');
   const storeName=targetStoreId?stores.find(s=>s.id===targetStoreId)?.name||'':'全店舗';
   // ヘッダー行（30分と40分を分離）
-  const headers=['店舗','氏名','役職','職種','②-1時間','日付','出勤','退勤','勤務時間(分)','休憩控除後(分)','残業(分)','常勤出勤','走行距離(km)','体調','アルコール','アルコール(退勤)','酒気確認(出勤)','酒気確認(退勤)','酒気確認指示事項','メモ','自動退勤',
+  const headers=['店舗','氏名','役職','職種','②-1時間','日付','出勤','退勤','勤務時間(分)','休憩控除後(分)','残業(分)','常勤出勤','走行距離(km)','体調','アルコール','アルコール(退勤)','酒気確認(出勤)','酒気確認(退勤)','酒気確認指示事項','メモ・利用目的','自動退勤',
     '営業','介護30分','介護40分','介護60分','介護90分','医療保険','担当者会議','退院前カンファ','契約','外部研修','時間外訪問','オンコール','年末年始手当',
     '有給種別','有給時間(h)'];
   const rows=[headers];
@@ -2208,10 +2211,15 @@ function exportCSV(month,targetStoreId){
   });
   // BOM + CSV生成
   const csvContent='\uFEFF'+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob=new Blob([csvContent],{type:'text/csv;charset=utf-8;'});
+  return {csv:csvContent,storeName,y,m};
+}
+function exportCSV(month,targetStoreId){
+  const r=buildAttendanceCsv(month,targetStoreId);
+  if(!r)return;
+  const blob=new Blob([r.csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url;a.download=`勤怠・運行管理表_${storeName}_${y}年${parseInt(m)}月.csv`;
+  a.href=url;a.download=`勤怠・運行管理表_${r.storeName}_${r.y}年${parseInt(r.m)}月.csv`;
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   URL.revokeObjectURL(url);
   showToast('📥 CSVをダウンロードしました');
@@ -2812,7 +2820,7 @@ function renderRecords(){
       <div style="flex:1">
         <div class="rl">${r.date}${r.date.startsWith(thisMonth())?'<span class="bdg bdg-b">今月</span>':''}${isHolidayVehicle?'<span class="bdg" style="background:rgba(79,142,247,.12);color:var(--ac)">🚗 車両のみ</span>':''}${missCO?'<span class="bdg" style="background:rgba(247,95,95,.15);color:var(--rd)">⚠ 退勤未打刻</span>':''}${missCI?'<span class="bdg" style="background:rgba(247,95,95,.15);color:var(--rd)">⚠ 出勤未打刻</span>':''}${missOdo?'<span class="bdg" style="background:rgba(247,211,79,.15);color:var(--yw)">⚠ ODO未入力</span>':''}${r.fullTimeFlag?'<span class="bdg" style="background:rgba(100,181,246,.15);color:#64b5f6">常勤</span>':''}${autoCoBadge(r)}</div>
         ${isHolidayVehicle
-          ?`<div class="rt" style="color:var(--ac)">休日車両利用（ODO: ${r.odometer?.toFixed(1)} km）${r.todayKm!=null?' ／ 走行 '+r.todayKm+'km':''}</div>`
+          ?`<div class="rt" style="color:var(--ac)">休日車両利用（ODO: ${r.odometer?.toFixed(1)} km）${r.todayKm!=null?' ／ 走行 '+r.todayKm+'km':''}${r.memo?' ／ 目的: '+r.memo:''}</div>`
           :isOdoOnly&&!sKintai
             ?`<div class="rt" style="color:var(--ac)">ODO: ${r.odometer?.toFixed(1)} km${r.todayKm!=null?' ／ 走行 '+r.todayKm+'km':''}</div>`
           :`<div class="rt">${r.checkin||'--:--'} → ${r.checkout||'--:--'}${r.workMinutes!=null?' ／ '+toHHMM(r.workMinutes):''}</div>`}
@@ -3046,7 +3054,7 @@ function renderEmpMgmt(){
       :e.role==='admin'
         ?'<span style="font-size:10px;background:rgba(247,211,79,.15);color:var(--yw);padding:2px 7px;border-radius:4px;font-weight:700;margin-left:6px">🔑 管理者</span>'
         :'<span style="font-size:10px;background:rgba(79,142,247,.15);color:var(--ac);padding:2px 7px;border-radius:4px;font-weight:700;margin-left:6px">👷 スタッフ</span>';
-    const driveBdg=e.driveMgr?'<span style="font-size:10px;background:rgba(61,214,140,.15);color:var(--gn);padding:2px 7px;border-radius:4px;font-weight:700;margin-left:6px">🚗 運転管理者</span>':e.subDriveMgr?'<span style="font-size:10px;background:rgba(61,214,140,.1);color:var(--gn);padding:2px 7px;border-radius:4px;font-weight:700;margin-left:6px">🚗 副運転管理者</span>':'';
+    const driveBdg=e.driveMgr?'<span style="font-size:10px;background:rgba(61,214,140,.15);color:var(--gn);padding:2px 7px;border-radius:4px;font-weight:700;margin-left:6px">🚗 運転管理者</span>':e.subDriveMgr?'<span style="font-size:10px;background:rgba(61,214,140,.1);color:var(--gn);padding:2px 7px;border-radius:4px;font-weight:700;margin-left:6px">🚗 副運転管理者</span>':e.assistant?'<span style="font-size:10px;background:rgba(61,214,140,.1);color:var(--gn);padding:2px 7px;border-radius:4px;font-weight:700;margin-left:6px">🚗 補助者</span>':'';
     const wtLabel=e.workStart?`⏰ ${e.workStart}〜${e.workEnd}`:`⏰ 全体設定（${settings.start}〜${settings.end}）`;
     // 役職変更ボタン（役員のみが役員を操作可能、管理者はスタッフ↔管理者を操作可能）
     let roleButtons='';
@@ -3095,7 +3103,8 @@ function renderEmpMgmt(){
         <span style="font-size:11px;color:var(--dim);flex-shrink:0">運転管理者:</span>
         <button class="mb" style="padding:5px 12px;${e.driveMgr?'background:rgba(61,214,140,.15);border:1px solid var(--gn);color:var(--gn)':'background:none;border:1px solid var(--bd);color:var(--dim)'}" onclick="setDriveRole('${e.id}','mgr')">運転管理者</button>
         <button class="mb" style="padding:5px 12px;${e.subDriveMgr?'background:rgba(61,214,140,.15);border:1px solid var(--gn);color:var(--gn)':'background:none;border:1px solid var(--bd);color:var(--dim)'}" onclick="setDriveRole('${e.id}','sub')">副運転管理者</button>
-        <button class="mb" style="padding:5px 12px;${(!e.driveMgr&&!e.subDriveMgr)?'background:rgba(247,95,95,.12);border:1px solid var(--rd);color:var(--rd)':'background:none;border:1px solid var(--bd);color:var(--dim)'}" onclick="setDriveRole('${e.id}','none')">なし</button>
+        <button class="mb" style="padding:5px 12px;${e.assistant?'background:rgba(61,214,140,.15);border:1px solid var(--gn);color:var(--gn)':'background:none;border:1px solid var(--bd);color:var(--dim)'}" onclick="setDriveRole('${e.id}','assistant')">補助者</button>
+        <button class="mb" style="padding:5px 12px;${(!e.driveMgr&&!e.subDriveMgr&&!e.assistant)?'background:rgba(247,95,95,.12);border:1px solid var(--rd);color:var(--rd)':'background:none;border:1px solid var(--bd);color:var(--dim)'}" onclick="setDriveRole('${e.id}','none')">なし</button>
         <span style="font-size:10px;color:var(--dim);width:100%">※ 酒気確認の判定はここで選任された人だけが行えます（役員のみ設定可）</span>
       </div>`:(driveBdg?`<div style="font-size:10px;color:var(--dim);background:var(--sf2);border-radius:8px;padding:6px 10px">🚗 ${driveRoleLabel(e)}（酒気確認の権限あり）</div>`:'')}
     </div>`;
@@ -3193,12 +3202,16 @@ function renderStorageInfo(){
   const el=document.getElementById('storageInfo');if(el)el.innerHTML=html;
   const el2=document.getElementById('storageInfoExec');if(el2)el2.innerHTML=html;
 }
-function downloadFullBackup(){
+function buildBackupData(){
   const data={};
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
     if(k.startsWith(LS_PREFIX+'ka_'))try{data[k.slice(LS_PREFIX.length)]=JSON.parse(localStorage.getItem(k));}catch(e){data[k.slice(LS_PREFIX.length)]=localStorage.getItem(k);}
   }
+  return data;
+}
+function downloadFullBackup(){
+  const data=buildBackupData();
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;
@@ -3880,12 +3893,12 @@ function renderAlcStatusSelf(){
 function updateAlcBadge(){
   const ids=alcScopeIds();
   const cnt=canConfirmAlc()?alcChecks.filter(c=>(c.status==='pending'||c.status==='nophoto')&&ids.has(c.empId)).length:0;
-  ['alcBadge','alcBadgeEmp'].forEach(id=>{const bd=document.getElementById(id);if(bd)bd.classList.toggle('show',cnt>0);});
+  ['alcBadge','alcBadgeEmp','alcBadgeExec'].forEach(id=>{const bd=document.getElementById(id);if(bd)bd.classList.toggle('show',cnt>0);});
 }
 function renderAlcQueue(){
-  // 管理者画面・スタッフ画面どちらの確認キューにも描画（存在する方へ）
-  const listEls=[document.getElementById('alcQueueList'),document.getElementById('alcQueueListEmp')].filter(Boolean);
-  const histEls=[document.getElementById('alcHistList'),document.getElementById('alcHistListEmp')].filter(Boolean);
+  // 管理者・スタッフ・役員いずれの確認キューにも描画（存在する方へ）
+  const listEls=[document.getElementById('alcQueueList'),document.getElementById('alcQueueListEmp'),document.getElementById('alcQueueListExec')].filter(Boolean);
+  const histEls=[document.getElementById('alcHistList'),document.getElementById('alcHistListEmp'),document.getElementById('alcHistListExec')].filter(Boolean);
   if(!listEls.length)return;
   const ids=alcScopeIds();
   const pend=alcChecks.filter(c=>(c.status==='pending'||c.status==='nophoto')&&ids.has(c.empId))
@@ -4494,44 +4507,51 @@ const ADMIN_FEATURE_DEFS=[
   {key:'leave',  label:'有給台帳', note:''},
 ];
 // ── 運転管理者 / 副運転管理者（酒気確認の権限保持者。役員が選任） ──
-function driveRoleLabel(acc){if(!acc)return'';if(acc.driveMgr)return'運転管理者';if(acc.subDriveMgr)return'副運転管理者';return'';}
-function canConfirmAlc(){const a=curAcc();return !!(a&&(a.driveMgr||a.subDriveMgr));}
-// 酒気確認タブの表示制御（指名された運転管理者・副のみ表示）
+function driveRoleLabel(acc){if(!acc)return'';if(acc.driveMgr)return'運転管理者';if(acc.subDriveMgr)return'副運転管理者';if(acc.assistant)return'補助者';return'';}
+function canConfirmAlc(){const a=curAcc();return !!(a&&(a.driveMgr||a.subDriveMgr||a.assistant));}
+// 酒気確認タブの表示制御（運転管理者・副・補助者のみ表示）
 function applyAlcTabVisibility(){
   const show=canConfirmAlc();
   ['adminAlcTab','empAlcTab'].forEach(id=>{const b=document.getElementById(id);if(b)b.style.display=show?'':'none';});
 }
-// 酒気確認キューの対象範囲（自店舗のアカウント。管理者はcurrentStoreId、スタッフ確認者はcurAcc().storeId）
-function alcScopeIds(){const store=currentStoreId||curAcc()?.storeId;return new Set(accounts.filter(a=>store?a.storeId===store:true).map(a=>a.id));}
+// 酒気確認キューの対象範囲（自店舗のアカウント＋必ず自分自身を含める＝自己確認可）
+function alcScopeIds(){const store=currentStoreId||curAcc()?.storeId;const s=new Set(accounts.filter(a=>store?a.storeId===store:true).map(a=>a.id));if(session?.id)s.add(session.id);return s;}
 // 日付差（'YYYY-MM-DD' d2 - d1 を日数で）
 function daysBetween(d1,d2){const a=new Date(d1+'T00:00:00'),b=new Date(d2+'T00:00:00');return Math.round((b-a)/86400000);}
-// 指定スタッフの店舗の運転管理者名（複数いれば先頭、副でも可、いなければシステム）
-function storeDriveMgrName(empId){const acc=accounts.find(a=>a.id===empId);const store=acc?.storeId;const mgr=accounts.find(a=>a.driveMgr&&(!store||a.storeId===store))||accounts.find(a=>a.subDriveMgr&&(!store||a.storeId===store));return mgr?mgr.name:'システム';}
+// 指定スタッフの店舗の確認権限者名（運転管理者→副→補助者の順、いなければシステム）
+function storeDriveMgrName(empId){const acc=accounts.find(a=>a.id===empId);const store=acc?.storeId;const inStore=a=>(!store||a.storeId===store);const mgr=accounts.find(a=>a.driveMgr&&inStore(a))||accounts.find(a=>a.subDriveMgr&&inStore(a))||accounts.find(a=>a.assistant&&inStore(a));return mgr?mgr.name:'システム';}
 // 退勤忘れ（自動退勤）バッジ
 function autoCoBadge(r){return r&&r.autoCheckout?'<span class="bdg" style="background:rgba(247,211,79,.2);color:var(--yw);font-weight:700">⏰ 退勤忘れ(自動退勤)</span>':'';}
 // 役員のみ: 運転管理者/副運転管理者を選任（店舗ごとに複数可）
 function setDriveRole(id,role){
   if(curAcc()?.role!=='executive'){showToast('⚠ 運転管理者の選任は役員のみ可能です');return;}
   const e=accounts.find(a=>a.id===id);if(!e)return;
-  e.driveMgr=(role==='mgr');e.subDriveMgr=(role==='sub');
+  e.driveMgr=(role==='mgr');e.subDriveMgr=(role==='sub');e.assistant=(role==='assistant');
   S.set('ka_accounts',accounts);
   renderEmpMgmt();
   if(typeof renderExecDriveRole==='function')renderExecDriveRole();
   if(typeof applyAlcTabVisibility==='function')applyAlcTabVisibility();
   if(typeof updateAlcBadge==='function')updateAlcBadge();
-  showToast(role==='none'?`✅ ${e.name} の運転管理者指定を解除しました`:`✅ ${e.name} を${role==='mgr'?'運転管理者':'副運転管理者'}に選任しました`);
+  const lbl=role==='mgr'?'運転管理者':role==='sub'?'副運転管理者':role==='assistant'?'補助者（安全運転管理者の業務を補助する者）':'';
+  showToast(role==='none'?`✅ ${e.name} の確認権限を解除しました`:`✅ ${e.name} を${lbl}に選任しました`);
 }
 // 役員ダッシュボード: 自分自身の運転管理者資格の付与/解除
 function renderExecDriveRole(){
   const el=document.getElementById('execDriveRole');if(!el)return;
   const a=curAcc();if(!a)return;
   const bs=(active,danger)=>active?(danger?'background:rgba(247,95,95,.12);border:1px solid var(--rd);color:var(--rd)':'background:rgba(61,214,140,.15);border:1px solid var(--gn);color:var(--gn)'):'background:none;border:1px solid var(--bd);color:var(--dim)';
+  const has=(a.driveMgr||a.subDriveMgr||a.assistant);
   el.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="mb" style="padding:6px 14px;${bs(a.driveMgr,false)}" onclick="setDriveRole('${a.id}','mgr')">運転管理者</button>
     <button class="mb" style="padding:6px 14px;${bs(a.subDriveMgr,false)}" onclick="setDriveRole('${a.id}','sub')">副運転管理者</button>
-    <button class="mb" style="padding:6px 14px;${bs(!a.driveMgr&&!a.subDriveMgr,true)}" onclick="setDriveRole('${a.id}','none')">なし</button>
+    <button class="mb" style="padding:6px 14px;${bs(a.assistant,false)}" onclick="setDriveRole('${a.id}','assistant')">補助者</button>
+    <button class="mb" style="padding:6px 14px;${bs(!has,true)}" onclick="setDriveRole('${a.id}','none')">なし</button>
   </div>
-  <div style="font-size:11px;color:var(--dim);margin-top:6px">現在: <b style="color:${(a.driveMgr||a.subDriveMgr)?'var(--gn)':'var(--dim)'}">${driveRoleLabel(a)||'未選任'}</b>${(a.driveMgr||a.subDriveMgr)?'　※店舗に入る（管理ダッシュボード）と酒気確認タブが表示され、判定できます':''}</div>`;
+  <div style="font-size:11px;color:var(--dim);margin-top:6px">現在: <b style="color:${has?'var(--gn)':'var(--dim)'}">${driveRoleLabel(a)||'未選任'}</b>${has?'　※下に酒気確認の確認キューが表示され、自分の分も含め判定できます':''}</div>`;
+  // 役員ダッシュボードの酒気確認カードを権限に応じて表示
+  const card=document.getElementById('execAlcCard');
+  if(card)card.style.display=canConfirmAlc()?'':'none';
+  if(canConfirmAlc()){renderAlcQueue();updateAlcBadge();}
 }
 // kintai/health/odo は保存値に関わらず常にtrue（出勤ボタン非表示等の旧機能は廃止）
 function getAdminFeatures(){const f=curAcc()?.adminFeatures||{};return {kintai:true,health:true,odo:true,visits:f.visits!==false,leave:f.leave!==false};}
@@ -5065,7 +5085,7 @@ function buildHealthDetail(empId, month){
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;color:var(--dim);padding-left:4px">
         ${isHolidayVehicle
-          ?`<div style="grid-column:span 2;color:var(--ac)">休日車両利用（ODO: ${r.odometer?.toFixed(1)} km）</div>`
+          ?`<div style="grid-column:span 2;color:var(--ac)">休日車両利用（ODO: ${r.odometer?.toFixed(1)} km）${r.memo?' ／ 目的: '+r.memo:''}</div>`
           :isOdoOnly&&!hShowK
             ?`<div style="grid-column:span 2;color:var(--ac)">ODO: ${r.odometer?.toFixed(1)} km${r.todayKm!=null?' ／ 走行 '+r.todayKm+'km':''}</div>`
           :`<div>出勤: <span style="color:var(--gn);font-family:var(--mo)">${r.checkin||'—'}</span></div>
